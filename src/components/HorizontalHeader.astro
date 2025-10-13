@@ -3,9 +3,14 @@ import { baseURL } from "@/lib/url";
 ---
 
 <div class="flex justify-between items-center md:hidden">
-  <a href={`${baseURL}/`} class="animate-underline font-semibold text-lg"
-    >tw.heo</a
-  >
+  <div class="flex flex-row gap-2">
+    <a href={`${baseURL}/`} class="animate-underline font-semibold text-lg"
+      >tw.heo</a
+    >
+    <a href={`https://github.com/taewoongheo`}>
+      <img src={`${baseURL}/github.svg`} alt="Github" />
+    </a>
+  </div>
   <nav>
     <ul class="flex gap-4">
       <li>
