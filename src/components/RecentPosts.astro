@@ -1,0 +1,25 @@
+---
+import { getCollection } from "astro:content";
+import BlogCard from "@/components/BlogCard.astro";
+
+const { limit, tag } = Astro.props;
+
+const posts = (await getCollection("blog")).sort(
+  (a, b) =>
+    new Date(b.data.pubDate).getTime() - new Date(a.data.pubDate).getTime()
+);
+const filteredPosts = tag
+  ? posts.filter((post) => post.data.tag.includes(tag))
+  : posts;
+const limitPosts = limit ? filteredPosts.slice(0, limit) : filteredPosts;
+---
+
+<ul class="not-prose list-none p-0 m-0 section-stack">
+  {
+    limitPosts.map((post) => (
+      <li>
+        <BlogCard post={post} slug={post.id} />
+      </li>
+    ))
+  }
+</ul>

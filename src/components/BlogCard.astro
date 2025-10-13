@@ -1,0 +1,50 @@
+---
+import { formatPostDate } from "@/lib/time";
+
+const {
+  post: {
+    data: { title, pubDate, tag, description },
+  },
+  slug,
+} = Astro.props;
+
+const formattedDate = formatPostDate(pubDate);
+---
+
+<div class="relative">
+  <div class="relative z-10 bg-(--bg) animate-card-translate">
+    <a href={`/blog/${slug}`} class="absolute inset-0 z-10"></a>
+    <div>
+      <div
+        transition:name={`${slug}-header`}
+        class="bg-gray-900 rounded-tl-sm rounded-tr-sm px-4 py-1"
+      >
+        <h3 transition:name={`${title}-${slug}`} class="text-white">{title}</h3>
+      </div>
+      <div
+        transition:name={`${slug}-content`}
+        class="border-2 border-t-0 border-dashed border-black rounded-bl-sm rounded-br-sm px-4 py-2"
+      >
+        <p transition:name={`${description}-${slug}`} class="opacity-60">
+          {description}
+        </p>
+        <div class="flex flex-row justify-between items-center">
+          <p transition:name={`${formattedDate}-${slug}`}>{formattedDate}</p>
+        </div>
+      </div>
+    </div>
+
+    <a
+      href={`/blog/tags/${tag}`}
+      class="absolute bottom-0 right-0 mr-[1.1rem] mb-[0.65rem] z-20"
+    >
+      <span transition:name={`${tag}-${slug}`} class="animate-underline">
+        #{tag}
+      </span>
+    </a>
+  </div>
+  <div
+    class="absolute inset-0 z-0 bg-gray-900 animate-shadow-translate rounded-sm"
+  >
+  </div>
+</div>

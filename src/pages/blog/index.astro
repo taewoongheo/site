@@ -1,0 +1,12 @@
+---
+import HeadingWithLink from "@/components/HeadingWithLink.astro";
+import RecentPosts from "@/components/RecentPosts.astro";
+import Base from "@/layouts/Base.astro";
+---
+
+<Base>
+  <article class="w-full section-stack">
+    <HeadingWithLink title="Blog" link="see all tags" href="/blog/tags" />
+    <RecentPosts />
+  </article>
+</Base>

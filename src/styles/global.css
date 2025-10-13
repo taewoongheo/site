@@ -1,0 +1,17 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+@config "../../tailwind.config.mjs";
+@import "@/styles/components.css";
+@import "@/styles/animate.css";
+
+@theme {
+  /* font */
+  --font-sans: "Work Sans", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+
+  /* grid */
+  --grid-size: 10px;
+  --bg: #f7f7f7;
+  --grid-color-small: rgba(100, 100, 100, 0.03);
+  --grid-color-large: rgba(80, 80, 80, 0.035);
+}

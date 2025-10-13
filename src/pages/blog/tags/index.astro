@@ -1,0 +1,31 @@
+---
+import { getCollection } from "astro:content";
+import Base from "@/layouts/Base.astro";
+import HeadingWithLink from "@/components/HeadingWithLink.astro";
+
+const posts = await getCollection("blog");
+const tagCounts = posts
+  .map((post) => post.data.tag)
+  .reduce((obj: Record<string, number>, tag: string) => {
+    obj[tag] = (obj[tag] || 0) + 1;
+    return obj;
+  }, {});
+---
+
+<Base>
+  <article class="section-stack">
+    <HeadingWithLink title="Blog #tags" link="see all posts" href="/blog" />
+    <ul class="list-none flex flex-col gap-3">
+      {
+        Object.entries(tagCounts).map(([tag, count]) => (
+          <li>
+            <a href={`/blog/tags/${tag}`} class="flex gap-1">
+              <h3 class="text-2xl animate-underline">#{tag}</h3>
+              <span class="text-2xl">({count})</span>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </article>
+</Base>

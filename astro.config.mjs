@@ -1,0 +1,43 @@
+// @ts-check
+
+import mdx from "@astrojs/mdx";
+import sitemap from "@astrojs/sitemap";
+import { defineConfig } from "astro/config";
+import tailwindcss from "@tailwindcss/vite";
+import expressiveCode from "astro-expressive-code";
+import remarkGfm from "remark-gfm";
+import rehypeSlug from "rehype-slug";
+import rehypeAutolinkHeadings from "rehype-autolink-headings";
+import { pluginLineNumbers } from "@expressive-code/plugin-line-numbers";
+import { pluginCollapsibleSections } from "@expressive-code/plugin-collapsible-sections";
+import { remarkMark } from "remark-mark-highlight";
+
+export default defineConfig({
+  site: "https://taewoongheo.github.io",
+  base: "/site/",
+  integrations: [
+    expressiveCode({
+      plugins: [pluginLineNumbers(), pluginCollapsibleSections()],
+      themes: ["kanagawa-wave"],
+    }),
+    mdx(),
+    sitemap(),
+  ],
+  markdown: {
+    remarkPlugins: [remarkGfm, remarkMark],
+    rehypePlugins: [
+      rehypeSlug,
+      [
+        rehypeAutolinkHeadings,
+        {
+          behavior: "wrap",
+          properties: { linkedheading: true },
+        },
+      ],
+    ],
+  },
+
+  vite: {
+    plugins: [tailwindcss()],
+  },
+});
