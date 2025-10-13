@@ -5,6 +5,7 @@ import { ClientRouter } from "astro:transitions";
 import VerticalHeader from "@/components/VerticalHeader.astro";
 import HorizontalHeader from "@/components/HorizontalHeader.astro";
 import Footer from "@/components/Footer.astro";
+import { baseURL } from "@/lib/url";
 
 interface Props {
   title?: string | undefined;
@@ -22,11 +23,9 @@ const {
   isArticle = false,
 } = Astro.props;
 
-import { baseURL } from "@/lib/url";
-
 const pageURL = new URL(Astro.url.pathname, Astro.site);
-const ogImageURL = new URL(ogImage, Astro.site);
 const canonicalURL = new URL(Astro.url.pathname, Astro.site);
+const ogImageURL = new URL(`${baseURL}${ogImage}`, Astro.site);
 ---
 
 <!doctype html>
@@ -71,7 +70,7 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
     />
 
     <!-- Canonical URL -->
-    <link rel="canonical" href={canonicalURL} />
+    <link rel="canonical" href={canonicalURL.href} />
 
     <!-- Primary Meta Tags -->
     <title>{title}</title>
@@ -80,24 +79,24 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
-    <meta property="og:url" content={pageURL} />
+    <meta property="og:url" content={pageURL.href} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
-    <meta property="og:image" content={ogImageURL} />
+    <meta property="og:image" content={ogImageURL.href} />
     {isArticle && <meta property="article:author" content={author} />}
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image" />
-    <meta property="twitter:url" content={pageURL} />
+    <meta property="twitter:url" content={pageURL.href} />
     <meta property="twitter:title" content={title} />
     <meta property="twitter:description" content={description} />
-    <meta property="twitter:image" content={ogImageURL} />
+    <meta property="twitter:image" content={ogImageURL.href} />
 
     <link
       rel="alternate"
       type="application/rss+xml"
       title={Constants.SITE_TITLE}
-      href={new URL(`${baseURL}/rss.xml`, Astro.site)}
+      href={`${baseURL}/rss.xml`}
     />
 
     <ClientRouter />
