@@ -1,5 +1,6 @@
 ---
 import { formatPostDate } from "@/lib/time";
+import { baseURL } from "@/lib/url";
 
 const {
   post: {
@@ -13,7 +14,7 @@ const formattedDate = formatPostDate(pubDate);
 
 <div class="relative">
   <div class="relative z-10 bg-(--bg) animate-card-translate">
-    <a href={`/blog/${slug}`} class="absolute inset-0 z-10"></a>
+    <a href={`${baseURL}/blog/${slug}`} class="absolute inset-0 z-10"></a>
     <div>
       <div
         transition:name={`${slug}-header`}
@@ -35,7 +36,7 @@ const formattedDate = formatPostDate(pubDate);
     </div>
 
     <a
-      href={`/blog/tags/${tag}`}
+      href={`${baseURL}/blog/tags/${tag}`}
       class="absolute bottom-0 right-0 mr-[1.1rem] mb-[0.65rem] z-20"
     >
       <span transition:name={`${tag}-${slug}`} class="animate-underline">

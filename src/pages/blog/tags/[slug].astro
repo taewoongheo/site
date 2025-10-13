@@ -3,6 +3,7 @@ import HeadingWithLink from "@/components/HeadingWithLink.astro";
 import RecentPosts from "@/components/RecentPosts.astro";
 import Base from "@/layouts/Base.astro";
 import { getCollection } from "astro:content";
+import { baseURL } from "@/lib/url";
 
 export async function getStaticPaths() {
   const posts = await getCollection("blog");
@@ -20,7 +21,7 @@ const { slug } = Astro.params;
     <HeadingWithLink
       title={`Blog #${slug}`}
       link="see all tags"
-      href="/blog/tags"
+      href={`${baseURL}/blog/tags`}
     />
     <RecentPosts tag={slug} />
   </article>

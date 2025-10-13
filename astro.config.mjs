@@ -1,5 +1,3 @@
-// @ts-check
-
 import mdx from "@astrojs/mdx";
 import sitemap from "@astrojs/sitemap";
 import { defineConfig } from "astro/config";
@@ -14,7 +12,7 @@ import { remarkMark } from "remark-mark-highlight";
 
 export default defineConfig({
   site: "https://taewoongheo.github.io",
-  base: "/site/",
+  base: import.meta.env.PROD ? "/site" : "/",
   integrations: [
     expressiveCode({
       plugins: [pluginLineNumbers(), pluginCollapsibleSections()],

@@ -1,16 +1,18 @@
 ---
-
+import { baseURL } from "@/lib/url";
 ---
 
 <div class="flex justify-between items-center md:hidden">
-  <a href="/" class="animate-underline font-semibold text-lg">tw.heo</a>
+  <a href={`${baseURL}/`} class="animate-underline font-semibold text-lg"
+    >tw.heo</a
+  >
   <nav>
     <ul class="flex gap-4">
       <li>
-        <a href="/blog" class="animate-underline">Blog</a>
+        <a href={`${baseURL}/blog`} class="animate-underline">Blog</a>
       </li>
       <li>
-        <a href="/projects" class="animate-underline">Projects</a>
+        <a href={`${baseURL}/projects`} class="animate-underline">Projects</a>
       </li>
     </ul>
   </nav>

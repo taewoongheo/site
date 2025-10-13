@@ -1,6 +1,7 @@
 ---
 import Base from "@/layouts/Base.astro";
 import { formatPostDate } from "@/lib/time";
+import { baseURL } from "@/lib/url";
 
 const {
   post: {
@@ -26,7 +27,7 @@ const formattedDate = formatPostDate(pubDate);
         <a
           transition:name={`${tag}-${id}`}
           class="animate-underline"
-          href={`/blog/tags/${tag}`}
+          href={`${baseURL}/blog/tags/${tag}`}
         >
           #{tag}
         </a>
