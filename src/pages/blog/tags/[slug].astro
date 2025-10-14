@@ -17,12 +17,16 @@ const { slug } = Astro.params;
 ---
 
 <Base>
-  <article class="w-full flex flex-col gap-6">
-    <HeadingWithLink
-      title={`Blog #${slug}`}
-      link="see all tags"
-      href={`${baseURL}/blog/tags`}
-    />
-    <RecentPosts tag={slug} />
-  </article>
+  <main class="w-full flex flex-col gap-6">
+    <header>
+      <HeadingWithLink
+        title={`Blog #${slug}`}
+        link="see all tags"
+        href={`${baseURL}/blog/tags`}
+      />
+    </header>
+    <section aria-label={`Posts tagged with ${slug}`}>
+      <RecentPosts tag={slug} />
+    </section>
+  </main>
 </Base>

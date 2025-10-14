@@ -4,8 +4,12 @@ import RecentProjects from "@/components/RecentProjects.astro";
 ---
 
 <Base>
-  <article class="w-full section-stack">
-    <h2 class="text-3xl font-bold">projects</h2>
-    <RecentProjects />
-  </article>
+  <main class="w-full section-stack">
+    <header>
+      <h1 class="text-3xl font-bold">Projects</h1>
+    </header>
+    <section aria-label="Projects list">
+      <RecentProjects />
+    </section>
+  </main>
 </Base>

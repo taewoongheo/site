@@ -6,12 +6,16 @@ import { baseURL } from "@/lib/url";
 ---
 
 <Base>
-  <article class="w-full section-stack">
-    <HeadingWithLink
-      title="Blog"
-      link="see all tags"
-      href={`${baseURL}/blog/tags`}
-    />
-    <RecentPosts />
-  </article>
+  <main class="w-full section-stack">
+    <header>
+      <HeadingWithLink
+        title="Blog"
+        link="see all tags"
+        href={`${baseURL}/blog/tags`}
+      />
+    </header>
+    <section aria-label="Blog posts list">
+      <RecentPosts />
+    </section>
+  </main>
 </Base>

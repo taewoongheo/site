@@ -8,28 +8,26 @@ import { baseURL } from "@/lib/url";
 ---
 
 <Base>
-  <section>
-    <article class="flex flex-col gap-12">
-      <div class="section-stack">
-        <h2 class="text-3xl font-bold">About</h2>
-        <About />
-      </div>
-      <div class="section-stack">
-        <HeadingWithLink
-          title="Recent posts"
-          link="see all posts"
-          href={`${baseURL}/blog`}
-        />
-        <RecentPosts limit={3} />
-      </div>
-      <div class="section-stack">
-        <HeadingWithLink
-          title="Recent projects"
-          link="see all projects"
-          href={`${baseURL}/projects`}
-        />
-        <RecentProjects />
-      </div>
-    </article>
-  </section>
+  <main class="flex flex-col gap-12">
+    <section class="section-stack" aria-label="About">
+      <h2 class="text-3xl font-bold">About</h2>
+      <About />
+    </section>
+    <section class="section-stack" aria-label="Recent posts">
+      <HeadingWithLink
+        title="Recent posts"
+        link="see all posts"
+        href={`${baseURL}/blog`}
+      />
+      <RecentPosts limit={3} />
+    </section>
+    <section class="section-stack" aria-label="Recent projects">
+      <HeadingWithLink
+        title="Recent projects"
+        link="see all projects"
+        href={`${baseURL}/projects`}
+      />
+      <RecentProjects />
+    </section>
+  </main>
 </Base>

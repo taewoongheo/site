@@ -14,23 +14,29 @@ const tagCounts = posts
 ---
 
 <Base>
-  <article class="section-stack">
-    <HeadingWithLink
-      title="Blog #tags"
-      link="see all posts"
-      href={`${baseURL}/blog`}
-    />
-    <ul class="list-none flex flex-col gap-3">
-      {
-        Object.entries(tagCounts).map(([tag, count]) => (
-          <li>
-            <a href={`${baseURL}/blog/tags/${tag}`} class="flex gap-1">
-              <h3 class="text-2xl animate-underline">#{tag}</h3>
-              <span class="text-2xl">({count})</span>
-            </a>
-          </li>
-        ))
-      }
-    </ul>
-  </article>
+  <main class="section-stack">
+    <header>
+      <HeadingWithLink
+        title="Blog #tags"
+        link="see all posts"
+        href={`${baseURL}/blog`}
+      />
+    </header>
+    <nav aria-label="Blog tags navigation">
+      <ul class="list-none flex flex-col gap-3">
+        {
+          Object.entries(tagCounts).map(([tag, count]) => (
+            <li>
+              <a href={`${baseURL}/blog/tags/${tag}`} class="flex gap-1">
+                <h3 class="text-2xl animate-underline">#{tag}</h3>
+                <span class="text-2xl" aria-label={`${count} posts`}>
+                  ({count})
+                </span>
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+  </main>
 </Base>

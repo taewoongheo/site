@@ -1,0 +1,2 @@
+- [ ] add hover opacity animation to blog cards
+- [ ] admonition block
