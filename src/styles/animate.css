@@ -7,6 +7,10 @@
   opacity: 1;
 }
 
+.blog-card:hover .animate-opacity {
+  opacity: 1;
+}
+
 .animate-underline {
   position: relative;
   display: inline-block;

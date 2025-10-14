@@ -13,7 +13,7 @@ const formattedDate = formatPostDate(pubDate);
 ---
 
 <div class="relative">
-  <div class="relative z-10 bg-(--bg) animate-card-translate">
+  <div class="relative z-10 bg-(--bg) animate-card-translate blog-card">
     <a href={`${baseURL}/blog/${slug}`} class="absolute inset-0 z-10"></a>
     <div>
       <div
@@ -26,18 +26,26 @@ const formattedDate = formatPostDate(pubDate);
         transition:name={`${slug}-content`}
         class="border-2 border-t-0 border-dashed border-black rounded-bl-sm rounded-br-sm px-4 py-2"
       >
-        <p transition:name={`${description}-${slug}`} class="opacity-60">
+        <p
+          transition:name={`${description}-${slug}`}
+          class="opacity-60 animate-opacity"
+        >
           {description}
         </p>
         <div class="flex flex-row justify-between items-center">
-          <p transition:name={`${formattedDate}-${slug}`}>{formattedDate}</p>
+          <p
+            transition:name={`${formattedDate}-${slug}`}
+            class="animate-opacity"
+          >
+            {formattedDate}
+          </p>
         </div>
       </div>
     </div>
 
     <a
       href={`${baseURL}/blog/tags/${tag}`}
-      class="absolute bottom-0 right-0 mr-[1.1rem] mb-[0.65rem] z-20"
+      class="absolute bottom-0 right-0 mr-[1.1rem] mb-[0.65rem] z-20 animate-opacity"
     >
       <span transition:name={`${tag}-${slug}`} class="animate-underline">
         #{tag}
