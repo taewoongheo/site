@@ -2,7 +2,7 @@
 title: "enflo"
 description: "timer app that visulize entropy"
 pubDate: "2025-10-09"
-heroImage: "../../../public/images/projects/enflo.png"
+heroImage: "../../../public/images/projects/enflo.webp"
 link: https://github.com/taewoongheo/enflo
 techStack: ["React Native"]
 ---
