@@ -1,4 +1,5 @@
 import mdx from "@astrojs/mdx";
+import react from "@astrojs/react";
 import sitemap from "@astrojs/sitemap";
 import { defineConfig } from "astro/config";
 import tailwindcss from "@tailwindcss/vite";
@@ -14,6 +15,7 @@ export default defineConfig({
   site: "https://taewoongheo.github.io",
   base: import.meta.env.PROD ? "/site" : "/",
   integrations: [
+    react(),
     expressiveCode({
       plugins: [pluginLineNumbers(), pluginCollapsibleSections()],
       themes: ["kanagawa-wave"],
