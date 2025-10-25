@@ -12,8 +12,8 @@ import { pluginCollapsibleSections } from "@expressive-code/plugin-collapsible-s
 import { remarkMark } from "remark-mark-highlight";
 
 export default defineConfig({
-  site: "https://taewoongheo.github.io",
-  base: import.meta.env.PROD ? "/site" : "/",
+  site: "https://twheo.dev",
+  base: "/",
   integrations: [
     react(),
     expressiveCode({
