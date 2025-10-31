@@ -1,0 +1,322 @@
+---
+title: "useState 를 구현하며 클로저와 친해지기"
+tag: "Javascript"
+pubDate: "2025-10-31"
+description: "useState를 직접 구현하며 클로저, stale closure, 상태 관리와 은닉화의 메커니즘을 이해해본다."
+---
+
+자바스크립트를 처음 공부하면서 가장 생소했던 개념 중 하나가 클로저다.
+
+클로저란 내부함수가 자신이 선언된 스코프를 기억하면서, ==외부에서 호출되더라도 자신이 선언된 스코프에 접근==할 수 있는 것을 말한다. 코드로 보면 이해가 쉬울 것이다.
+
+```js
+function outer() {
+  const value = 0;
+
+  function inner() {
+    return value + 10;
+  }
+
+  return inner;
+}
+
+const inner = outer();
+inner(); // 10
+```
+
+`inner` 함수가 리턴되면서 `outer` 함수는 종료되었다. 하지만 `inner` 함수는 `outer` 스코프에 선언된 value 에 여전히 접근할 수 있다. 이는 inner 함수가 outer 의 스코프를 참조하고 있어, 스코프가 메모리에 유지되고 있기 때문이다. 이것이 클로저다.
+
+클로저는 크게 두 가지로 사용된다.
+
+- 상태관리
+- 정보 은닉(private)
+
+위와 같은 특성을 잘 보여주는 좋은 예시는 _React hook_ 이라고 생각했다. 따라서 이번 글은 클로저를 이용해 React hook 중 하나인 _useState_ 를 직접 구현해볼것이다.
+
+클로저에 대한 기초개념이 있지만 클로저가 익숙치 않다면 이 글이 도움이 될 것이다.
+
+글을 따라 직접 구현해보면, 다음 내용들을 명확하게 이해할 수 있다.
+
+- 클로저의 동작 방식
+- 클로저를 사용할 시 실수할 수 있는 문제들
+- React hook 에서 클로저 활용방식
+
+## useState
+
+useState 는 state 를 관리하며, 값을 변경하여 컴포넌트를 재랜더링 할 수 있는 훅이다.
+
+state 는 setState 함수를 이용하여 값을 변경할 수 있다.
+
+그렇다면 state 를 내부 변수로 둔 뒤, setState 를 클로저 함수로 만들어서 외부로 노출시켜보자. 이것이 가장 기본적인 형태일 것이다.
+
+```js
+function useState(initialValue) {
+  let _state = initialValue;
+
+  function setState(newValue) {
+    _state = newValue;
+  }
+
+  return [_state, setState];
+}
+```
+
+함수는 state 와 setState 를 리턴하고 즉시 생명주기가 끝난다. 하지만 클로저 덕분에 outer(useState) 함수가 종료되어도, inner 함수(setState)를 통해 내부 변수 `_state` 에 접근 가능하다.
+
+그리고 상태를 직접 변경해보았다.
+
+```js
+const [state, setState] = useState(0);
+
+console.log(state); // 0;
+setCount(10);
+console.log(state); // 0;
+```
+
+그런데 결과가 이상하다. 값이 업데이트 되지 않는다. 왜 일까?
+
+이는 `state` 변수가 초기값 ==0== 을 가졌을 뿐이기 때문이다. setState 가 내부 변수를 변경하더라도, 이미 할당된 값은 바뀌지 않는다(pass-by-value).
+
+따라서 변경된 상태를 가져오도록 함수를 추가했다.
+
+```js
+function useState(initialValue) {
+  let _state = initialValue;
+
+  function getState() {
+    return _state;
+  }
+
+  function setState(newValue) {
+    _state = newValue;
+  }
+
+  return [getState, setState];
+}
+
+const [getState, setState] = useState(0);
+
+console.log(getState()); // 0
+setState(10);
+console.log(getState()); // 10
+```
+
+이제 클로저에 의해 변경된 상태가 제대로 반영된다. 여기서 getter 는 setState 와 동일한 렉시컬 환경을 캡처한다. **즉, 두 함수가 동일한 환경을 공유하고 있기 때문에 setState 로 변경된 상태를 getter 가 참조할 수 있는 것이다.** 상태관리와 은닉화 모두 정상적으로 이루어진다.
+
+여기서 실제 훅에 가깝도록 상태를 가져오는 부분을 함수가 아닌 변수로 바꿔보려 한다.
+
+```js
+const React = (function () {
+  let _state;
+
+  return {
+    render(Component) {
+      const component = Component();
+      component.render();
+      return component;
+    },
+    useState(initialValue) {
+      _state = _state || initialValue;
+
+      function setState(newValue) {
+        _state = newValue;
+      }
+
+      return [_state, setState];
+    },
+  };
+})();
+
+function Counter() {
+  const [count, setCount] = React.useState(0);
+
+  return {
+    click: () => setCount(count + 1),
+    render: () => console.log(count),
+  };
+}
+
+const counter = React.render(Counter); // 0
+counter.click(); // 상태가 변경
+React.render(Counter); // 1
+```
+
+_React_ 객체에는 상태를 의미하는 `_state` 가 있다. 이는 즉시실행함수로써, `render`, `useState` 함수가 있는 객체를 생성 후 바로 리턴한다. 이 과정에서 반환된 `useState` 는 `_state` 를 참조하는 클로저가 된다.
+
+참고로 실제 React 에선 훅이 참조하는 변수가 변경될 시 자동으로 재랜더링이 이루어지지만 글의 목적 상 구현하지 않았다. 대신 직접 `render` 함수를 호출하도록 했다. 또한 `Counter` 컴포넌트 내부에서 동작하는 setState 를 외부에서 실행시킬 수 있도록 반환하도록 했다. 이 부분은 _vanilaJS_ 에서 React 의 동작을 수동으로 구현하고 보기 위함이다.
+
+여기서 포인트는 다음과 같다.
+
+- `useState` 함수 내부에서는 React 객체의 `_state` 를 참조한다. 즉, 클로저로 동작한다.
+- `React.render` 마다 `Counter()` 가 재랜더링(실행)된다. 이때 `React.useState(0)` 도 재실행된다. 만약 이전에 상태가 저장된 적이 있다면, `_state = _state || initialValue;` 에서 이전에 저장된 `_state` 가 참조될 것이다.
+
+## React는 어떻게 여러 훅의 상태를 관리할까?
+
+꽤 완성된 것 처럼 보이지만 사실 문제가 있다. 그것은 현재 상태를 하나 밖에 관리하지 못한다는 점이다. 상태를 관리하는 변수가 `_state` 하나밖에 없으니 당연하다.
+
+```js
+const React = (function () {
+  let _state = null;
+
+  return {
+    render(Component) {
+      const component = Component();
+      component.render();
+      return component;
+    },
+    useState(initialValue) {
+      _state = _state || initialValue;
+
+      function setState(newValue) {
+        _state = newValue;
+      }
+
+      return [_state, setState];
+    },
+  };
+  1;
+})();
+
+function Counter() {
+  const [count, setCount] = React.useState(0);
+  const [text, setText] = React.useState("initial");
+
+  return {
+    click: () => setCount(count + 1),
+    updateText: () => setText("new text"),
+    render: () => console.log("counter:", { count }, "\ntext:", { text }),
+  };
+}
+
+const counter = React.render(Counter);
+// counter: { count: 0 }
+// text: { text: 'initial' }
+
+counter.click();
+React.render(Counter);
+// counter: { count: 1 }
+// text: { text: 1 }
+
+counter.updateText();
+React.render(Counter);
+// counter: { count: 'new text' }
+// text: { text: 'new text' }
+```
+
+두 상태를 각각 `click`, `updateText` 함수에서 업데이트 한다. 이때 각각 실행 이후 결과를 확인해보면 상태가 동시에 업데이트되는 것을 볼 수 있다.
+
+이를 해결하기 위해선 **각 훅들이 관리하는 상태를 별도로 저장하고 처리**해야 한다. 참고로 [리액트 훅의 동작은 배열과 비슷하다](https://medium.com/@ryardley/react-hooks-not-magic-just-arrays-cd4f1857236e). 따라서 간단한 배열로 구현해보았다.
+
+```js
+const React = (function () {
+  let _state = [];
+  let _idx = 0;
+
+  return {
+    render(Component) {
+      _idx = 0; // 재랜더링마다 인덱스 초기화
+      const component = Component();
+      component.render();
+      return component;
+    },
+    useState(initialValue) {
+      const idx = _idx++;
+      _state[idx] = _state[idx] || initialValue;
+
+      function setState(newValue) {
+        _state[idx] = newValue;
+      }
+
+      return [_state[idx], setState];
+    },
+  };
+  1;
+})();
+
+function Counter() {
+  const [count, setCount] = React.useState(0);
+  const [text, setText] = React.useState("initial");
+
+  return {
+    click: () => setCount(count + 1),
+    updateText: () => setText("new text"),
+    render: () => console.log("counter:", { count }, "\ntext:", { text }),
+  };
+}
+
+const counter = React.render(Counter);
+// counter: { count: 0 }
+// text: { text: 'initial' }
+
+counter.click();
+React.render(Counter);
+// counter: { count: 1 }
+// text: { text: 'initial' }
+
+counter.updateText();
+React.render(Counter);
+// counter: { count: 1 }
+// text: { text: 'new text' }
+```
+
+상태가 독립적으로 관리되는 것을 볼 수 있다. 핵심이 되는 부분을 자세히 보며 동작 원리를 이해해보자.
+
+```js
+useState(initialValue) {
+  // _idx에 현재 환경의 인덱스 캡처, useState를 _idx를 참조하는 클로저로 만듦
+  // _idx를 사용했으므로 증가
+  const idx = _idx++;
+
+  _state[idx] = _state[idx] || initialValue;
+
+  function setState(value) {
+	_state[idx] = value;
+  }
+
+  return [_state[idx], setState];
+},
+```
+
+`const idx = _idx++;` 에서 현재 상태의 인덱스를 저장, 이 인덱스는 언젠가 setState 에서 다시 사용해야 한다.
+
+setState 함수가 바로 이 인덱스를 클로저로 캡처하는 것이다. **함수 내부에서 `idx` 를 참조함으로써, 해당 상태값의 고유한 인덱스를 '기억' 할 수 있다.** 이렇게 클로저로 캡처된 인덱스가 있기 때문에, 나중에 같은 함수를 호출하더라도 항상 올바른 상태값을 찾아 업데이트할 수 있는 것이다.
+
+포인트는 다음과 같다
+
+- 각 상태를 `_state` 배열로 관리
+- `useState` 훅에서 `_state` 배열을 `_idx` 로 접근
+- 이때 `_idx` 를 `setState` 를 통해 캡쳐
+- 이후 `setState` 함수로 접근해도 **생성 당시 인덱스를 기억해서 올바른 인덱스에 접근**
+
+## Stale Closure
+
+만약 setState 에서 인덱스 캡처링이 없다면 어떤 문제가 발생할까? _stale closure_ 문제가 발생할 것이다.
+
+stale closure 는 **클로저가 잘못된 시점의 환경을 참조하는 문제**를 말한다.
+
+예를 들어, 인덱스 캡처링을 제거하고 아래처럼 구현한다고 가정해보자.
+
+```js
+    useState(initialValue) {
+      _state[_idx] = _state[_idx] || initialValue;
+
+      function setState(value) {
+        _state[_idx] = value;
+      }
+
+      return [_state[_idx++], setState];
+    },
+```
+
+setState 함수가 클로저로 `_idx` 를 캡처하기는 하지만, React 가 전역적으로 관리하는 **공유 변수 `_idx` 자체를 참조**하게 된다.
+
+`Counter` 컴포넌트 렌더링이 끝나면 `_idx`의 최종 값은 (예시에서) ==2== 가 된다. 이후 `setCount` 를 호출하든 `setText` 를 호출하든, 두 함수 모두 `_idx`의 현재 값인 ==2== 를 바라보고 있기 때문에 같은 state 값을 참조하고 변경한다.
+
+지금까지 useState 를 통해 클로저의 활용법과 stale closure 문제까지 살펴보았다. 클로저는 단순히 난해한 개념이 아니라, React와 같은 현대 라이브러리에서 **'상태'를 안전하고 독립적으로 관리하는 핵심 메커니즘**으로 작동하고 있음을 보여준다.
+
+## 참고
+
+- [https://developer.mozilla.org/en-US/docs/Web/JavaScript/Closures](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Closures)
+- [https://inpa.tistory.com/entry/JS-%F0%9F%93%9A-%ED%81%B4%EB%A1%9C%EC%A0%80](https://inpa.tistory.com/entry/JS-%F0%9F%93%9A-%ED%81%B4%EB%A1%9C%EC%A0%80
+- [https://hewonjeong.github.io/deep-dive-how-do-react-hooks-really-work-ko/](https://hewonjeong.github.io/deep-dive-how-do-react-hooks-really-work-ko/)
+- [https://medium.com/@ryardley/react-hooks-not-magic-just-arrays-cd4f1857236e](https://medium.com/@ryardley/react-hooks-not-magic-just-arrays-cd4f1857236e)
