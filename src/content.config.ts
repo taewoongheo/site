@@ -8,12 +8,13 @@ const blog = defineCollection({
     pubDate: z.coerce.date(),
     description: z.string(),
     tag: z.string(),
+    lang: z.enum(["ko", "en"]),
   }),
 });
 
 const projects = defineCollection({
   loader: glob({ base: "./src/content/projects", pattern: "**/*.{md,mdx}" }),
-  schema: ({ image }) =>
+  schema: ({ image }: { image: any }) =>
     z.object({
       title: z.string(),
       description: z.string(),
