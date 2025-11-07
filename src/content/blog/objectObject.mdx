@@ -1,0 +1,171 @@
+---
+title: "[object Object]의 정체가 뭘까? 바닥까지 파헤쳐보기"
+tag: "Javascript"
+pubDate: "2025-11-05"
+description: "[Object object] 가 출력되는 원리를 프로토타입의 동작 방식과 함께 설명하고, Symbol.toStringTag 를 활용하여 이를 직접 커스터마이징하는 방법을 다루었다."
+---
+
+한창 JavaScript 복습을 하던 중 _[object Object]_ 를 만났다. 한창 JavaScript 복습중이었기 때문에 구석구석 살펴보고자 정체를 알아보기로 했다.
+
+이번 글에서는 _[object Object]_ 가 무엇인지 알아보고, 그 아래에 숨겨진 **프로토타입**, **프로토타입 체인**의 동작 원리를 살펴본다.
+
+## _[object Object]_
+
+```js
+const obj = { x: 1 };
+
+console.log(obj); // { 'x' : 1 }
+console.log(obj + ""); // [object Object]
+```
+
+`obj`를 그대로 출력하면 객체를 그대로 보여준다. 하지만 문자열 `''`를 더한 경우 `[object Object]`가 출력된다. 이는 객체가 문자열로 암묵적 타입 변환되었기 때문이다.
+
+이때 객체가 문자열로 변환될 때 내부적으로 어떤 일이 일어날까?
+
+JavaScript 엔진은 내부적으로 toString 메서드를 호출한다. 이 메서드는 객체를 **[object 타입]** 형식으로 반환하기 때문에 `[object Object]`라는 결과가 나온 것이다.
+
+하지만 객체 리터럴로 선언했을 뿐인데 `toString` 메서드를 호출한다. 직접 정의하지도 않았는데 어디서 추가된 것일까?
+
+## toString 은 어디서 왔을까?
+
+여러분이 Java와 같은 객체지향 언어를 공부했다면 toString 메서드가 꽤 익숙할 것이다.
+
+```java
+class Obj {}
+
+Obj obj = new Obj();
+System.out.println(obj.toString());
+```
+
+Java에서는 toString 을 하위 클래스가 직접 구현하지 않아도 사용할 수 있다. 모든 클래스가 상위 클래스인 Object 로부터 이 메서드를 상속받기 때문이다.
+
+JavaScript에서도 비슷하다. 앞서 본 `toString` 메서드는 Object 라는 최상위 클래스에서 온 것이다.
+
+다만, JavaScript는 클래스가 아닌 **프로토타입 기반의 상속**을 구현한다.
+
+## prototype
+
+프로토타입은 상위 객체가 하위 객체에게 공유할 프로퍼티를 정의하는 객체이다. 예를 들어 상위 객체가 프로토타입 객체에 메서드를 정의하면, 하위 객체도 해당 메서드를 사용할 수 있다.
+
+프로토타입 객체는 **[[Prototype]]** 내부 슬롯으로 표현된다.
+
+프로토타입 체인이 상위 객체와 하위 객체를 연결한다.
+
+프로토타입 체인의 끝은 **Object.prototype**이다. 하위 객체에서 이를 접근하기 위해 **\_\_proto\_\_** 접근자 프로퍼티를 사용할 수 있다.
+
+> ES6 이후에는 **\_\_proto\_\_**대신 `Object.getPrototypeOf`를 사용하는 것을 권장한다.
+
+실제로 JavaScript의 빌트인 객체들은 모두 **Object**의 인스턴스이다. 프로토타입을 통해 이와 연결되어 있다. 이것이 의미하는 바는, 곧 빌트인 객체들 또한 **Object.prototype**의 메서드를 사용할 수 있다는 것이다.
+
+```js
+Function.prototype.__proto__ === Object.prototype; // true
+Array.prototype.__proto__ === Object.prototype;   // true
+RegExp.prototype.__proto__ === Object.prototype; // true
+Promise.prototype.__proto__ === Object.prototype;  // true
+...
+```
+
+**[[Prototype]]** 이 참조하는 프로토타입 객체는, 해당 객체가 생성된 방식에 의해 결정된다.
+
+- 객체 리터럴의 경우, 프로토타입은 Object.prototype 이다.
+- 생성자함수로 생성된 인스턴스의 프로토타입은 생성자함수.prototype 이다.
+- **_Object.create()_** 메서드로 생성된 경우, 인자로 전달된 객체를 프로토타입으로 설정한다.
+
+따라서 `{}(객체 리터럴)` 의 경우, 프로토타입은 **Object.prototype**이다.
+
+```js
+{}.__proto__ === Object.prototype; //true
+```
+
+### prototype chain
+
+프로로타입 객체는 프로토타입 체인으로 연결된다.
+
+호출 시 프로토타입 체인으로 연결되는 과정은 아래와 같다.
+
+- 현재 메서드를 호출한 객체의 스코프 내에 해당 메서드가 있는지 확인한다.
+- 만약 없다면, 프로토타입 체인을 따라 **[[Prototype]]** 로 이동한다. 그리고 해당 스코프 내에 메서드가 있는지 확인한다.
+- 이 과정을 찾을 때까지 반복한다.
+- 프로토타입 체인의 종점인 Object.prototype 에 메서드가 정의되어 있다. 이것을 실행한다.
+
+**오버라이딩**이 가능한 것도 이러한 원리다.
+
+```js
+const obj = {
+  toString() {
+    return "my obj";
+  },
+};
+
+console.log(obj + ""); // "my obj"
+```
+
+## Object.prototype.toString()
+
+지금까지 내용을 간단하게 정리하면,
+
+- [object Object] 는 객체가 문자열로 평가된 결과다.
+- 객체가 문자열로 평가될 때, toString 이 실행된다.
+- 객체 리터럴은 자기 자신에게서 이를 찾는다.
+- 객체 리터럴 자체에는 없기 때문에, 프로토타입 체인을 따라 Object.prototype 의 toString 을 찾는다.
+
+결국, 실행되는 것은 Object.prototype.toString() 이다.
+
+## 모든 것은 Object 에서 시작된다.
+
+프로토타입 체인이 동작하는 방식을 좀 더 자세히 알아보자.
+
+JavaScript가 지원하는 타입은 7개의 원시 타입과 object 타입까지 더해 총 8개다.
+
+- **Boolean**
+- **Number**
+- **String**
+- **Symbol**
+- **BigInt**
+- **Undefined**
+- **Null**
+
+**null**, **undefined**를 제외한 나머지 타입들은 래퍼객체를 갖고 있다. 중요한 것은 해당 래퍼객체들이 모두 **Object** 의 인스턴스라는 것이다. 이는 곧, **원시 값들이 일시적으로 래퍼객체로 변환될 때, Object의 프로퍼티에 접근할 수 있다**는 것을 의미한다.
+
+```js
+Boolean instanceof Object; //true
+Number instanceof Object; //true
+String instanceof Object; //true
+Symbol instanceof Object; //true
+BigInt instanceof Object; //true
+undefined instanceof Object; //false
+null instanceof Object; //false
+```
+
+사실 **우리는 원시값이 래퍼객체로 변환되어 메서드를 찾는** 경험을 알게 모르게 많이 봐왔다. 아래 예시를 보자.
+
+```js
+"hello".hasOwnProperty("toString"); // false
+```
+
+먼저, 결과로 false 가 나온다는 것은 함수가 존재하고 실행되었다는 것을 의미한다.
+
+`"hello"` 문자열 자체는 원시타입이다. 하지만 함수를 호출할 시 내부적으로 String 래퍼 객체로 감싸진다.
+
+또한 String.prototype 에서 `hasOwnProperty` 메서드를 찾으려 시도한다. 하지만 **이 메서드는 String.prototype 에 없으므로, 엔진은 프로토타입 체인을 따라 Object.prototype 으로 이동하여 메서드를 찾아 실행한다.**
+
+## 그렇다면 공유할 수 없는 프로퍼티라면?
+
+공유할 수 없는 프로퍼티인 경우가 있을 것이다. 예를 들어 "객체를 동결하는 **Object.freeze**" 메서드가 있다.
+
+이 메서드는 말 그대로 "객체"의 프로퍼티를 변경불가하도록 만든다. 이걸 **123** 같은 숫자 원시타입에 사용할 수 있을까?
+
+답은 "안된다"이다. 이처럼 객체 자체에만 적용할 수 있는 메서드는 프로토타입으로 공유하지 않고, static method 로 정의된다.
+
+Array, Date, String 같은 다른 빌트인 객체들도 "해당 타입(생성자)에서만 실행할 수 있는 함수"를 정적 메서드로 정의한다.
+
+이것이 두 호출 방식의 차이이다.
+
+- 프로토타입 메서드: "hello".toUpperCase()처럼 원시값(의 래퍼 객체)이 프로토타입 체인을 통해 호출
+- 정적 메서드: Object.freeze()처럼 생성자(Object.~)가 직접 호출
+
+#### 참고
+
+- [ECMAScript® 2025 Language Specification](https://tc39.es/ecma262/multipage/fundamental-objects.html#sec-object.prototype.tostring)
+- [자바스크립트에서 [object Object] 가 대체 뭘까?](https://medium.com/%EC%98%A4%EB%8A%98%EC%9D%98-%ED%94%84%EB%A1%9C%EA%B7%B8%EB%9E%98%EB%B0%8D/%EC%9E%90%EB%B0%94%EC%8A%A4%ED%81%AC%EB%A6%BD%ED%8A%B8%EC%97%90%EC%84%9C-object-object-%EA%B0%80-%EB%8C%80%EC%B2%B4-%EB%AD%98%EA%B9%8C-fe55b754e709)
+- [JavaScript data types and data structures](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures)
