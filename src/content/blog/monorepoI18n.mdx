@@ -1,0 +1,232 @@
+---
+title: "모노레포 i18n 다국어 처리 아키텍쳐 및 트러블 슈팅"
+tag: "Architecture"
+pubDate: "2025-12-29"
+description: "공유 패키지에서의 플랫폼 의존성 문제, 언어 변경 동기화 문제 등을 해결하는 아키텍처 설계 과정을 담았다."
+lang: "ko"
+---
+
+import Terminal from "@/components/Terminal";
+
+_Expo_ + _Next.js_ 모노레포 환경에서 i18n 다국어 처리 아키텍쳐를 만드는 과정을 담았다.
+
+서로 다른 런타임을 가지는 _expo_ 와 _next.js_ 에서 i18n 로직을 공유할 수 있다면 높은 응집도의 코드가 될 거 같아 시도했다. 또한 이는 다른 비즈니스 로직에도 동일한 방식으로 적용할 수 있으므로 꽤 도움이 될 거라 생각했다.
+
+_expo_ 는 네이티브, _next.js_ 는 웹뷰로 사용했다.
+
+버전 정보는 다음과 같다.
+
+- _expo_: ^54.0.27
+- _Next.js_: 16.0.7
+- _i18next_: ^25.7.1
+- _react-i18next_: ^16.4.0
+
+서로 다른 런타임(Native, Web)을 가진 두 환경에서 i18n 다국어 로직을 공유할 때 발생하는 문제들을 위주로 다뤘다. 번들러의 정적 분석 원리를 이해하고 _DI_(의존성 주입)와 _IoC_(제어의 역전) 패턴을 적용해 유연한 구조로 개선하는 과정을 기록했다.
+
+## i18n 객체 공유하기
+
+**시작하기 전에 알아야 할 가장 중요한 규칙은 언어 설정의 원천이 네이티브에게 있다는 것이다.** 네이티브는 _MMKV_ 라고 하는 비동기 로컬 저장소에서 언어 정보를 가져와 초기화한다. 웹뷰는 언어 정보를 네이티브부터 받아 사용한다. 따라서 웹뷰 스스로 언어 정보를 바꿀 수 없다. 이는 데이터의 원천을 정해둠으로써 데이터 불일치를 막기 위한 설계였다.
+
+`i18n` 객체는 공통 패키지로 생성한다. `i18n` 객체는 _MMKV_ 에 저장된 값을 직접 가져와 초기화한다.
+
+```ts
+import i18n from "i18next";
+import { initReactI18next } from "react-i18next";
+import { MMKV } from "react-native-mmkv";
+import ko from "./locales/ko.json";
+import en from "./locales/en.json";
+
+const storage = new MMKV();
+const savedLanguage = storage.getString("language") || "en";
+
+i18n.use(initReactI18next).init({
+  resources: { en, ko },
+  lng: savedLanguage,
+  fallbackLng: "en",
+  interpolation: { escapeValue: false },
+});
+
+export default i18n;
+```
+
+폴더 구조는 아래와 같다.
+
+```
+├── apps
+│   ├── expo-app (Native)
+│   │   └── src/App.tsx
+│   └── next-app (WebView)
+│       └── src/app/layout.tsx
+└── packages
+    └── i18n
+        ├── src/index.ts (i18n 설정 로직)
+        ├── locales/ (번역 JSON 파일)
+        └── package.json
+```
+
+이렇게 공통으로 만든 `i18n` 객체를 네이티브, 웹뷰에서 각각 직접 가져와 사용하려고 시도했다.
+
+## 빌드 에러 발생
+
+<Terminal
+  code={`Module not found: Can't resolve 'react-native-mmkv'
+> 1 | import { MMKV } from 'react-native-mmkv';
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+`}
+  variant="error"
+/>
+
+웹뷰 빌드 과정에서 에러가 발생했다. 웹(_Next.js_)에는 네이티브 브릿지가 필요한 `react-native-mmkv` 패키지가 존재하지 않기 때문이다.
+
+그럼 `if` 문으로 분기하면? 마찬가지로 에러가 발생한다.
+
+```ts
+// 웹이 아닐 때만 MMKV를 사용하도록 분기 처리
+if (Platform.OS !== "web") {
+  const storage = new MMKV();
+  savedLanguage = storage.getString("language") || "ko";
+}
+
+// ... i18n.init 로직
+```
+
+분기처리에도 에러가 발생하는 이유는 _ESM_(EcmaScript Modules)의 정적분석 방식 때문이다. 정적분석이란 번들러가 코드실행 전, 트리쉐이킹, 구문 분석, 의존성 파악 등을 수행하는 과정을 말한다.
+
+_CJS_ 방식에서도 구분분석은 실행되지만 `require` 함수로 모듈을 불러오기 때문에 조건부 로딩이 어느정도 가능했다. 하지만 _ESM_ 의 `import` 는 최상단에서 정적으로 평가된다. **즉, 빌드타임에 해당 모듈이 없으면 반드시 에러가 발생한다.**
+
+> 물론 _CJS_ 방식도 정적분석 단계에서 대부분 검증된다. 다만, `require` 안에 문자열(모듈 이름)이 아닌 동적 로딩, 예를 들어 변수로 작성하면 번들러는 정적 분석를 포기한다. 따라서 오류가 발생하지 않는다. 다만 안정성 측면에서 권장하지 않는 방식이다.
+
+`react-native-mmkv` 는 네이티브 모듈이므로 웹 환경에는 존재하지 않는 네이티브 라이브러리를 참조하려다 에러가 발생하는 것이다.
+
+**결국 웹뷰 코드 자체에 네이티브 모듈이 포함되면 안되므로 이는 아키텍쳐적인 결함이라고 판단했다.** 실제로 내 코드엔 여러 결함이 있었다.
+
+- _DIP_(의존성 역전 원칙) 위반: 고수준의 번역 로직이 저수준의 MMKV 구현체에 의존하고 있음.
+- _SRP_(단일 책임 원칙) 위반: 패키지가 번역뿐 아니라 저장소 탐색 책임까지 지고 있음.
+- _OCP_(개방-폐쇄 원칙) 위반: 플랫폼 추가 시 코드 수정이 불가피함.
+
+## 아키텍쳐 개선
+
+이를 해결하는 방법은 _MMKV_ 에 대한 의존성 자체를 없애는 것이다.
+
+그래서 초기 언어를 파라미터로 받도록 했다. 이는 _DI_(Dependency Injection) 패턴이다. '초기 언어 결정하기' 라는 기능만 정의하고 구현은 외부에서 주입받고 있기 때문이다. 이를 통해 _MMKV_ 코드 자체를 포함하지 않을 수 있다.
+
+```ts
+import locales from "@pado/locales";
+import i18n from "i18next";
+import { initReactI18next } from "react-i18next";
+
+export const initI18n = (currentLanguage: string | undefined) => {
+  if (!i18n.isInitialized) {
+    i18n.use(initReactI18next).init({
+      resources: {
+        ...locales,
+      },
+      lng: currentLanguage,
+      fallbackLng: "en",
+      interpolation: {
+        escapeValue: false,
+      },
+      react: {
+        useSuspense: false,
+      },
+    });
+  }
+
+  return i18n;
+};
+```
+
+또한 _IoC_(Inversion of Control) 가 적용된 것도 볼 수 있다. `i18n` 객체가 저장소를 직접 선택하는것이 아니라, 저장소를 받아서 사용하도록 제어권을 외부에게 주었기 때문이다.
+
+이제 `initI18n` 은 순수 함수가 되었다. 그렇다면 실제 의존성(`lang`)은 누가 주입할까? 바로 각 앱의 진입점에서 주입한다. *Expo*의 `App.tsx`와 *Next.js*의 `layout.tsx`가 그 역할을 맡는다.
+
+추가로, _OCP_(Open-closed principle) 도 만족함을 볼 수 있다. 만약 웹뷰가 하나 더 붙는다고 해도 기존 코드는 변함 없기 때문이다.
+
+## 격리된 런타임 잇기
+
+현재 구조에선 네이티브와 웹뷰 모두 `initI18n` 를 각자 호출하기 때문에 두 인스턴스 간 정보가 공유되지 않는다. 따라서 네이티브가 언어를 변경해도 웹뷰는 그 사실을 모른채 자신만의 초기 언어를 설정한다. 따라서 동기화 전략이 필요했다.
+
+> 물론 이전처럼 `i18n` 객체 자체를 네이티브와 웹뷰에서 동시에 사용해도 런타임엔 공유되지 않는다. 런타임 자체가 다르기 때문이다.
+
+동기화 전략은 크게 두 가지 방식으로 나뉜다.
+
+- URL 방식
+- 이벤트 리스너 방식
+
+### URL 방식
+
+먼저, _URL_ 방식은 네이티브에서 _WebView_ 초기화 시 `url` 의 쿼리 파라미터로 언어 정보를 함께 보내는 것이다.
+
+```tsx
+// expo
+export default function LangPage() {
+  const { language, changeLanguage } = useLanguage(); // 현재 언어 정보를 가져옴
+
+  const url = `http://localhost:3000?lang=${language}`;
+
+  return (
+    <View>
+      ...
+      <View className="w-full h-full mt-2">
+        <WebView source={{ uri: url }} />
+      </View>
+    </View>
+  );
+}
+
+// next.js
+const getInitialLanguage = () => {
+  if (typeof window !== "undefined") {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("lang") || undefined;
+  }
+
+  return undefined;
+};
+```
+
+- _next.js_ 에서 `window` 타입을 검증해야 하는 이유는, _app router_ 는 기본 서버 컴포넌트로 동작하는데 이때 `window` 객체가 존재하지 않을 수 있기 때문이다
+
+웹뷰는 _URL_ 을 파싱하여 얻은 언어 정보로 `i18n` 을 초기화한다. 이 방식은 구현이 비교적 간단하다는 장점이 있다.
+
+다만, _URL_ 로 웹뷰의 언어를 설정하기 때문에 **네이티브에서 언어를 바꾸면 반드시 새로운 _URL_ 을 통해 다시 로드해야 한다.** 따라서 깜빡임 문제가 발생한다.
+
+### 이벤트 리스너 방식
+
+이벤트 리스너 방식은 `injectedJavascript` 를 이용해서 실시간으로 네이티브의 '현재 언어'를 전달하는 방식이다. 웹뷰는 이벤트 리스너를 통해 네이티브의 언어가 바뀌는 것을 감지할 수 있다.
+
+```tsx
+// expo
+const changeWebViewLanguage = (newLang: string) => {
+  const script = `
+    window.dispatchEvent(new CustomEvent('changeLanguage', { 
+      detail: { lang: '${newLang}' } 
+    }));
+  `;
+  webViewRef.current?.injectJavaScript(script);
+};
+
+// next.js
+useEffect(() => {
+  const handleLanguageChange = (event: any) => {
+    const newLang = event.detail.lang;
+    i18n.changeLanguage(newLang); // 새로고침 없이 언어만 즉시 교체
+  };
+
+  window.addEventListener("changeLanguage", handleLanguageChange);
+  return () =>
+    window.removeEventListener("changeLanguage", handleLanguageChange);
+}, []);
+```
+
+이 방식은 구현이 비교적 복잡하지만 깜빡임 문제가 없다. 기존 _URL_ 은 유지된 채 이벤트만 감지하면 되기 때문이다.
+
+## 결론
+
+나는 _URL_ 방식을 선택했다. **가장 큰 이유는 `stateless` 때문이었다.** **_URL_ 은 웹의 가장 기본적인 상태 저장소이다.** **복잡한 이벤트 브릿지 없이 _URL_ 만 있으면 언제든 동일한 화면을 렌더링할 수 있는 멱등성을 보장한다.**
+
+깜빡임 또한 문제가 되지 않았다. 왜냐하면 앱의 특성 상 별도의 '설정' 페이지에서 언어를 바꾸는 방식인데, 보통 설정 페이지는 네이티브 뷰로 만든다. 즉, 설정 페이지에 들어왔다는 것 자체가 이미 웹뷰가 언마운트 된 상태이다(설정 페이지에 웹뷰를 사용하지 않는 한). **언어를 변경하고 다시 웹뷰를 랜더링하면 단지 처음에 마운트한 것과 완전히 동일하다.** 즉, 설정 페이지에 웹뷰를 같이 띄워놓을 것이 아니라면 _URL_ 방식이 맞다고 생각했다.
+
+추가로 언어 변경 자체는 빈번한 액션이 아니기도 하고, **웹뷰를 새로고침하여 가장 확실한 상태로 초기화 하는것이 데이터 정합성 측면에서도 유리하다고 판단했다.**
+
+**결국 완벽한 기술보다는 현재 우리 서비스의 UX 흐름과 유지보수의 용이성에 가장 적합한 기술을 선택하는 것이 중요하다고 다시 한번 느꼈다.**
