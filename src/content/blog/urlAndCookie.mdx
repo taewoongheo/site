@@ -1,0 +1,123 @@
+---
+title: "웹뷰에 상태 공유하기: URL vs 쿠키"
+description: "앱과 웹뷰 간 언어 정보 등을 공유할 때 쿠키 대신 URL 방식을 선택한 이유와 race condition 문제를 분석한다"
+pubDate: "2026-02-07"
+tag: "React Native"
+lang: "ko"
+---
+
+지난번에 작성했던 [모노레포 i18n 다국어 처리 아키텍쳐](https://twheo.dev/blog/monorepoi18n/)에서 이어지는 글이다.
+
+이전 글을 간단하게 요약하자면,
+
+- 앱(_Expo_)와 웹(_Next.js_)의 모노레포 구조
+- 앱에서 설정한 언어 정보를 웹도 공유를 해야 하는 문제
+- 공유 방법으로 두 가지를 고려했음
+  - `URL` 방식: 쿼리 파라미터에 언어 정보를 담아 보낸 뒤 웹에서 파싱하여 설정하는 방식
+  - 이벤트 리스너 방식: 이벤트를 생성하는 `JS` 로직을 웹뷰에 주입한 뒤 언어 정보를 공유하는 방식
+- 두 방법 모두 장단점이 있었음
+  - `URL` 방식은 도중에 언어 정보가 변경될 시 웹에 동기화가 되지 않는다는 것
+  - 이벤트 리스너 방식은 렌더링 뒤 언어가 바뀌는 깜빡임 문제가 있다는 것
+- 결국 `URL` 방식을 선택함. 이유는 깜빡임 문제가 가장 치명적이라고 생각했고 웹뷰가 켜져있는 상태에서 언어 정보가 바뀌지는 않기 때문
+
+`URL` 방식은 초기 로딩 시점에 상태를 확실히 전달할 수 있어 안정적이었다. 하지만 프로젝트가 커지며 새로운 고민이 생겼다. 언어 정보 외에 테마(다크/라이트 모드)나 유저 정보처럼 공유해야 할 상태가 늘어날 때마다 모든 호출부에서 쿼리 파라미터를 직접 수정해야 했기 때문이다.
+
+이 문제를 해결할 가장 간단한 방법은 `URL` 로직들을 별도 컴포넌트로 만들어서 응집도를 높이면 된다. 하지만 혹시 다른 방법이 있는건 아닌지, 내가 이전에 놓친 건 없는지 찾아보았고, '쿠키' 라는 대안을 발견했다.
+
+쿠키는 커스텀 헤더와 달리 한 번만 설정해두면 브라우저가 알아서 모든 요청에 담아 보내주므로 매우 편리해 보였다. 실제로 직접 구현해보니 코드도 깔끔하고 잘 동작하는 것 같았다.
+
+하지만 쿠키 또한 몇 가지 문제가 있어 사용할 수 없었다.
+
+## 왜 쿠키는 사용할 수 없을까?
+
+가장 큰 이유는 _race condition_ 이었다. _race condition_ 은 쿠키 설정과 웹뷰 요청 간 발생했다. 생각보다 _race condition_ 이 발생하는 지점이 꽤나 있었다.
+
+첫번째로 앱(_Expo_)내에서의 `JS` 와 네이티브 간 통신 시간이었다. 쿠키 설정은 `JS` 에서 동작하고 이는 네이티브에 반영되어야 한다. 중요한 점은 네이티브에 쿠키 설정이 반영된 후 웹뷰 요청이 발생해야 되는데 이를 보장할 수 없다는 것이 문제였다. 왜냐하면 `JS` 와 네이티브 간 통신은 비동기적으로 일어나기 때문이다. 만약 특정 문제로 인해 네이티브의 쿠키 비동기 설정이 늦어지는 상태에서 웹뷰 요청이 먼저 일어나면 웹뷰는 쿠키 없이 요청되게 된다.
+
+두 번째로는 각 네이티브(_iOS_, _Android_) 자체의 _race condition_ 이다. _iOS_ 의 경우 웹뷰와 앱의 프로세스를 별도로 관리한다. 따라서 앱의 쿠키정보를 웹으로 전달하는 건 OS 가 결정한다. 이때 쿠키가 설정되지 않은 채, 즉 미러링이 끝나지 않은 상태에서 웹뷰가 요청될 가능성이 있었다.
+
+_Android_ 또한 비슷한 문제가 있었다. _Android_ 는 성능을 위해 쿠키를 메모리에 임시 보관했다가 나중에 `flush` 하여 사용한다. 문제는 `flush` 되는 타이밍을 모른다는 것이다. 따라서 `flush` 이전에 웹뷰 요청이 발생하면 쿠키가 설정되지 않는 문제가 발생한다.
+
+- `flush` 란 메모리의 데이터가 디스크에 write 되는 것을 말한다.
+
+이 문제들은 데이터의 물리적 경계, 상태의 안정성을 보장하는 생명주기의 속도와, 웹뷰의 네트워크 요청 간 순서가 보장되지 않는다는 것이 본질적 문제이다.
+
+## `URL` 방식은 왜 안전할까?
+
+`URL` 방식은 매우 결정론적이다. 웹뷰가 요청되는 시점에 피룡한 모든 정보가 `URL` 문자열 자체에 포함되어 있기 때문이다. 쿠키 설정 처럼, 요청에 필요한 이전 스텝이 비동기적으로 이루어지는 것이 아니기 때문에 훨씬 안정적이다.
+
+또한 `searchParams`를 통해 서버 컴포넌트(_SSR_)에서도 즉시 상태를 읽을 수 있어 깜빡임이 없다는 점도 중요하다.
+
+## 어떻게 개선할 수 있을까?
+
+응집도 문제는 _URL Builder_ 패턴과 공통 컴포넌트로 해결했다. 동시에 `URL` 생성 로직을 캡슐화하여 결합도를 낮췄다. 공유 상태는 전부 전역상태로 관리함으로써 설정 변경 시 앱과 웹뷰가 반응할 수 있도록 했다.
+
+```tsx
+// URI 를 생성하는 함수
+const buildUri = (
+  baseUrl: string,
+  route: string,
+  params: Record<string, string | undefined>,
+) => {
+  const url = new URL(
+    `${baseUrl}${route.startsWith("/") ? route : `/${route}`}`,
+  );
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value) {
+      url.searchParams.set(key, value);
+    }
+  });
+
+  return url.toString();
+};
+
+// 웹뷰 공통 컴포넌트
+export function CustomWebView({
+  route,
+  renderError,
+  ...props
+}: CustomWebViewProps) {
+  const { language } = useLanguage();
+
+  const source = useMemo(() => {
+    const uri = buildUri(getWebViewBaseURL(), route, { lang: language });
+    return {
+      uri,
+    };
+  }, [route, language]);
+
+  return (
+    <WebView
+      {...props}
+      source={source}
+      renderLoading={() => (
+        <WebViewLoadingView>
+          <LoadingSpinner />
+        </WebViewLoadingView>
+      )}
+      renderError={renderError}
+    />
+  );
+}
+```
+
+웹뷰 내부(_Next.js_)에서는 `searchParams`를 통해 전달받은 상태를 서버 사이드에서 즉시 _i18n_ 초기화에 사용한다. 덕분에 _Hydration_ 불일치 오류 없이 완벽하게 동기화된 화면을 렌더링할 수 있었다.
+
+```tsx
+export default function I18nLayout({
+  children,
+  searchParams,
+}: {
+  children: ReactNode;
+  searchParams: { lang?: string };
+}) {
+  const lang = searchParams.lang || DEFAULT_LANG;
+  // 서버에서 바로 i18n 초기화 (Hydration Mismatch 없음!)
+  const i18n = initI18n(lang);
+
+  return <I18nextProvider i18n={i18n}>{children}</I18nextProvider>;
+}
+```
+
+결국 쿠키로 구현해서 동작했던 건 단순히 운이 좋아서였다. 구현할 땐 이게 어떻게 동작하는지 다른 대안은 없는지 등을 꼼꼼하게 살펴봐야 하는 것을 다시 한번 느꼈다.

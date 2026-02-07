@@ -175,14 +175,19 @@ export default function LangPage() {
 }
 
 // next.js
-const getInitialLanguage = () => {
-  if (typeof window !== "undefined") {
-    const params = new URLSearchParams(window.location.search);
-    return params.get("lang") || undefined;
-  }
+export default function I18nLayout({
+  children,
+  searchParams,
+}: {
+  children: ReactNode;
+  searchParams: { lang?: string };
+}) {
+  const lang = searchParams.lang || DEFAULT_LANG;
+  // 서버에서 바로 i18n 초기화 (Hydration Mismatch 없음!)
+  const i18n = initI18n(lang);
 
-  return undefined;
-};
+  return <I18nextProvider i18n={i18n}>{children}</I18nextProvider>;
+}
 ```
 
 - _next.js_ 에서 `window` 타입을 검증해야 하는 이유는, _app router_ 는 기본 서버 컴포넌트로 동작하는데 이때 `window` 객체가 존재하지 않을 수 있기 때문이다
