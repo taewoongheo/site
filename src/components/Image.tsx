@@ -1,16 +1,25 @@
 import { baseURL } from "@/lib/url";
 
+type ImageSize = "sm" | "md" | "lg";
+
 interface ImageProps {
   src: string;
   alt: string;
+  size?: ImageSize;
 }
 
-const Image = ({ src, alt }: ImageProps) => {
+const sizeClass: Record<ImageSize, string> = {
+  sm: "max-w-sm",
+  md: "max-w-md",
+  lg: "max-w-lg",
+};
+
+const Image = ({ src, alt, size }: ImageProps) => {
   return (
     <img
       src={`${baseURL}${src}`}
       alt={alt}
-      className="w-full sm:w-3/4 md:w-1.5/2"
+      className={size ? sizeClass[size] : undefined}
     />
   );
 };

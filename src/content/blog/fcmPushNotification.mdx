@@ -1,0 +1,259 @@
+---
+title: "Expo iOS 에서 FCM 기반 푸쉬 알림 구현하기"
+tag: "React Native"
+pubDate: "2026-03-02"
+description: "Expo iOS 환경에서 FCM 을 경유하여 APNs 기반 푸쉬 알림을 구현하는 과정과 막혔던 부분들을 정리한다"
+lang: "ko"
+---
+
+import Image from "@/components/Image";
+
+_Expo_ iOS 환경에서 FCM 기반 푸쉬 알람을 구현했다. 푸쉬 알람은 기본적으로 별도의 백엔드 서버가 필요하며, APNs(Apple Push Notification service) 를 사용한다.
+
+푸쉬 알람을 구현하는데에는 두 가지 방법이 있다.
+
+- APNs 직접 사용
+- FCM 경유
+
+APNs 을 직접 사용하는 경우 백엔드가 직접 APNs API 를 호출한다.
+
+- 백엔드 → APNs → 디바이스 알람
+
+다만, 이 방법은 iOS 만 지원하며, 토큰 설정 및 권한 관리가 비교적 복잡하다는 단점이 있다.
+
+따라서 나는 FCM(Firebase Cloud Messaging)을 경유하는 방법을 선택했다. 백엔드가 FCM 에 요청을 보내면, FCM 이 APNs 를 대신 호출해주는 방식이다.
+
+- 백엔드 → FCM → APNs → 디바이스 알람
+
+이 방법은 iOS 뿐 아니라 Android 도 함께 관리할 수 있으며 토큰 관리도 편리해지는 장점이 있다.
+
+## 설정
+
+가장 먼저 `bundle ID` 에 `Push Notifications` 항목에 체크하여 앱이 푸쉬 알람 권한을 가질 수 있도록 허용한다. `bundle ID` 는 Apple Developer → Certificates, Identifiers & Profiles → Identifiers 에서 확인할 수 있다.
+
+<Image
+  src="/images/posts/fcmPushNotification/1.webp"
+  alt="Push Notifications 권한 설정"
+/>
+
+이후 Certificates, Identifiers & Profiles 의 keys 항목에서 키를 발급해야 한다. 키는 외부 서비스가 애플의 권한(ex) 푸쉬, 애플 로그인 등)이 필요할 때 애플 서버에게 자신을 인증하기 위한 비공개 키 파일이다. 애플 서버는 외부 서비스의 키 파일을 보고 해당 서비스가 인증되었음을 확인한다. 현재는 FCM 이 APNs 에 직접 요청을 보내기 때문에 FCM 에게 키 파일을 주어야 한다. 생성 시 `Apple Push Notifications service (APNs)` 권한을 주면 된다.
+
+<Image src="/images/posts/fcmPushNotification/2.webp" alt="APNs 키 발급" />
+
+- 이때 다운로드 받은 `.p8` 은 잃어버리지 않도록 조심
+- Sandbox & Production 로 설정하여 테스트와 실제 환경 모두 푸쉬 알람을 받을 수 있도록 설정
+
+이제 Firebase Console 로 이동하여 프로젝트를 생성 후 iOS 앱을 하나 만든다. 이때 iOS 앱의 `bundle ID` 는 푸쉬 알람 권한을 갖고 있는 앱의 `bundle ID` 와 정확하게 일치해야 한다. `GoogleService-Info.plist` 도 다운로드 받아준다.
+
+<Image
+  src="/images/posts/fcmPushNotification/3.webp"
+  alt="Firebase iOS 앱 생성"
+/>
+
+다음으로 "클라우드 메시징" 탭으로 이동한 뒤, FCM 서버에게 이전에 만들었던 키 파일을 전달한다. "Apple 앱 구성" 섹션을 보면 방금 만든 iOS 앱이 있다. 여기서 APN 인증 키 부분에 아까 다운로드 했던 `.p8` 을 넣어주면 된다. Key ID 와 Team ID 도 입력해준다.
+
+<Image src="/images/posts/fcmPushNotification/4.webp" alt="FCM APNs 키 등록" />
+
+마지막으로 앱 코드에 `GoogleService-Info.plist` 파일을 넣고, `app.json` 에 해당 파일 경로와 필요한 설정들을 추가한다.
+
+<Image
+  src="/images/posts/fcmPushNotification/5.webp"
+  alt="app.json 설정"
+  size="sm"
+/>
+
+```tsx
+  ios: {
+    infoPlist: {
+	  // ...
+      UIBackgroundModes: ['remote-notification'],
+    },
+    entitlements: {
+      'aps-environment': 'production',
+    },
+    googleServicesFile: './GoogleService-Info.plist',
+    // ...
+  }
+```
+
+- `UIBackgroundModes`: 앱이 백그라운드 상태일 때 원격 푸쉬 알림을 수신할 수 있도록 허용
+- `entitlements`: APNs 서버 환경을 설정
+  - production
+  - development(sandbox)
+  - 이전에 생성한 키(`.p8`)의 environment 와 일치해야 함
+
+## 구현
+
+필요한 라이브러리
+
+- @react-native-firebase/app
+  - Firebase 코어
+  - `GoogleService-Info.plist` 읽어서 Firebase를 초기화함
+- @react-native-firebase/messaging
+  - FCM 모듈. 토큰 발급(`getToken`), 권한 요청(`requestPermission`), 알림 수신 핸들러 등 푸쉬 관련 기능
+
+구현은 가독성을 위해 유틸함수와 훅으로 구분했다. 유틸함수 파일은 필요한 함수들을 정의하고, 훅은 유틸함수들을 이용해 초기화한다.
+
+1. 권한 요청
+
+```tsx
+import messaging from "@react-native-firebase/messaging";
+
+export async function requestPushPermission(): Promise<boolean> {
+  const authStatus = await messaging().requestPermission();
+
+  return (
+    authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+    authStatus === messaging.AuthorizationStatus.PROVISIONAL
+  );
+}
+```
+
+- `messaging().requestPermission()` 은 사용자에게 알림 허용 팝업을 띄움
+- `AUTHORIZED`(허용) 또는 `PROVISIONAL`(조용한 알림) 이면 true
+
+2. 토큰 발급 + 백엔드 서버 전송
+
+```tsx
+export async function registerPushToken(): Promise<void> {
+  const token = await messaging().getToken(); // fcm 토큰 발급
+  await sendTokenToServer(token);
+}
+
+async function sendTokenToServer(token: string): Promise<void> {
+  await apiClient.post("/fcm", { fcmToken: token }); // 백엔드에 토큰 전송
+}
+```
+
+- `messaging().getToken()` 으로 FCM 토큰을 발급받고 토큰을 백엔드에 저장
+- 백엔드 서버는 이 토큰으로 FCM API 를 호출하여 푸쉬를 보냄
+
+3. 토큰 갱신 감지
+
+```tsx
+export function onTokenRefresh(callback?: (token: string) => void): () => void {
+  return messaging().onTokenRefresh(async (token) => {
+    await sendTokenToServer(token);
+    callback?.(token);
+  });
+}
+```
+
+- 토큰 값은 영구적이지 않다. 아래와 같은 경우 변경됨
+  - 앱 삭제 후 재설치
+  - 새 기기에서 앱 복원
+  - 앱 데이터 초기화
+  - firebase 가 자체적으로 갱신
+- `messaging().onTokenRefresh()` 으로 토큰을 갱신
+- 내부적으로 이벤트 리스너가 달려있음
+
+4. 알림 탭 핸들러
+
+```tsx
+/** background/quit 상태 알림 탭 핸들러 */
+export function onNotificationOpened(
+  callback: (message: FirebaseMessagingTypes.RemoteMessage) => void,
+): () => void {
+  return messaging().onNotificationOpenedApp(callback);
+}
+
+/** quit 상태에서 알림 탭으로 앱 열었을 때 */
+export async function getInitialNotification(): Promise<FirebaseMessagingTypes.RemoteMessage | null> {
+  return messaging().getInitialNotification();
+}
+```
+
+- 알림을 클릭했을 때 어떻게 처리할 지 결정
+- `messaging().onNotificationOpenedApp()`
+  - background/quit 상태 일 때 지정한 콜백을 실행
+  - 이벤트 리스너가 달려있음. 탭할 때마다 `callback` 이 실행
+- `messaging().getInitialNotification()`
+  - 앱이 꺼진 상태에서 알람을 탭하면 OS 가 앱을 실행시킴. 이때 앱에게 알림 데이터를 반환
+  - 이벤트 리스너 없음. 앱이 완전히 꺼진 상태에서 시작시점에 한번만 확인
+
+5. 훅
+
+```tsx
+export function usePushNotification() {
+  useEffect(() => {
+    let unsubscribeRefresh: (() => void) | undefined;
+    let unsubscribeOpened: (() => void) | undefined;
+
+    async function setup() {
+      try {
+        const permitted = await requestPushPermission(); // 알람 허용 여부
+        if (!permitted) return;
+
+        await registerPushToken(); // fcm 토큰 발급 및 백엔드 전송
+
+        unsubscribeRefresh = onTokenRefresh(); // fcm 토큰 갱신
+
+        unsubscribeOpened = onNotificationOpened((_message) => {
+          // TODO: 알림 탭으로 앱 열었을 때 처리 (딥링크 등)
+        });
+
+        // quit 상태에서 알림 탭으로 열었을 때
+        const initialNotification = await getInitialNotification();
+        if (initialNotification) {
+          // TODO: 초기 알림 처리
+        }
+      } catch (error) {
+        console.warn("Push notification setup failed:", error);
+      }
+    }
+
+    setup();
+
+    return () => {
+      unsubscribeRefresh?.();
+      unsubscribeOpened?.();
+    };
+  }, [accessToken, router]);
+}
+```
+
+- `onNotificationOpened`(`messaging().onNotificationOpenedApp()`) 와 `onTokenRefresh`(`messaging().onTokenRefresh`) 는 이벤트 리스너가 달려있기 때문에 cleanup 에서 해제해주어야 함
+
+## 막혔던 부분들
+
+### 시뮬레이터에선 테스트 불가
+
+시뮬레이터는 APNs 서버에 등록할 수 없다. APNs 디바이스 토큰을 발급받으려면 실제 하드웨어가 필요하기 때문이다.
+
+나의 경우엔 Ad Hoc 배포를 통해 실제 기기에서 테스트했다.
+
+`eas.json` 에서 `distribution: "internal"` 로 설정하면 된다. 물론 그 전에 기기를 등록해야 한다.
+
+```json
+{
+  // ...
+  "build": {
+    // ...
+    "preview": {
+      "distribution": "internal",
+      "channel": "preview"
+    }
+  }
+}
+```
+
+이후 `preview` 로 프로필을 설정해서 빌드하면 이후 JS 코드 업데이트 시 `eas update` 로 빠르게 배포하여 테스트할 수 있다.
+
+```
+// 빌드
+eas build --profile preview --platform ios
+
+// JS 업데이트
+eas update --channel preview
+```
+
+### APNs 환경 정확하게 맞추기
+
+APNs 서버는 `production` 과 `sandbox` 로 나뉘어져 있다.
+
+<Image src="/images/posts/fcmPushNotification/6.webp" alt="APNs 환경 구분" />
+
+이때 앱이 APNs 에 요청을 보낼 때 실제 환경은 provisioning profile 에 의해 결정되며, `entitlements` 에 설정한 값은 덮어씌워진다.
+
+- 그렇다고 `entitlements` 설정을 빼면 안 된다. 선언 자체가 없으면 앱 바이너리에 push notification entitlement 가 포함되지 않을 수 있기 때문이다
+- 즉, 어떤 환경을 쓸지는 provisioning profile 이 정하고, "push 를 쓰겠다"는 선언은 `entitlements` 가 하는 것이다
