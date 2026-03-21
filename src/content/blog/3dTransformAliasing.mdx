@@ -1,0 +1,186 @@
+---
+title: "RN iOS 3D Transform Aliasing 해결하기 - 모바일 GPU 동작 원리"
+tag: "React Native"
+pubDate: "2026-03-21"
+description: "모바일 GPU 아키텍쳐부터 Offscreen Rendering 까지 동작원리를 이해하고, shouldRasterizeIOS 로 aliasing 을 해결하는 과정을 정리했다."
+lang: "ko"
+---
+
+import Image from "@/components/Image";
+
+_React Native_ `View` 에 3D transform 을 적용했더니 모서리에서 aliasing 이 발생했다. 회전 각도가 커질수록 심해졌다.
+
+- `react-native`: 0.81.5
+
+<Image
+  src="/images/posts/3dTransformAliasing/1.webp"
+  alt="3d transform aliasing"
+/>
+
+## Aliasing 이 생기는 이유
+
+화면의 그래픽은 rasterization 을 거쳐 픽셀로 표현된다. Rasterization 이란 vector 를 픽셀화하는 과정이며 크게 3단계로 이루어진다.
+
+1. 좌표 계산
+2. 샘플링: 각 픽셀의 중심점이 도형 내부에 있는지 확인
+3. 색상 채우기
+
+<Image
+  src="/images/posts/3dTransformAliasing/5.webp"
+  alt="rasterization"
+  size="sm"
+/>
+
+이때 `View` 가 비스듬하게 그려지면 해당 픽셀을 어떻게 채워야 할까?
+
+<Image
+  src="/images/posts/3dTransformAliasing/6.webp"
+  alt="rasterization"
+  size="sm"
+/>
+
+GPU 는 '도형 안쪽', '도형 바깥쪽' 두 가지 중 하나로 판단할 수밖에 없다. 따라서 비스듬하게 배치된 모서리는 픽셀 그리드와 정렬되지 않아 계단 현상이 발생한다.
+
+이를 해결하는 방법이 AA(Anti-Aliasing) 이다. AA 에는 여러 종류가 있다.
+
+- SSAA(Super-Sample): 고해상도로 렌더링 후 축소
+- MSAA(Multi-Sample): 픽셀 경계에서 여러 샘플 포인트로 커버리지 판정
+- FXAA/TAA: 후처리 기반 경계 블러 또는 프레임 누적
+
+하지만 RN 에서는 AA 가 기본 적용되지 않는다.
+
+## `borderRadius` 로 AA 활성화하기
+
+기본 적용되지 않을 뿐, RN 에도 AA 자체는 존재한다. RN 은 coverage-based AA 를 사용하며, offscreen masking 과정에서 가장자리 픽셀의 alpha 값을 부분 점유율로 계산해 배경과 블렌딩하여 aliasing 을 개선한다.
+
+RN 에서 이 AA 를 활성화하는 가장 간단한 방법은 `borderRadius` 속성을 추가하는 것이다.
+
+```tsx
+<View
+  style={{
+    width: 100,
+    height: 100,
+    transform: [{ rotate: "45deg" }],
+    borderRadius: 1, // 보이지 않는 borderRaidus 추가
+  }}
+/>
+```
+
+<Image
+  src="/images/posts/3dTransformAliasing/2.webp"
+  alt="3d transform aliasing"
+/>
+
+흰색 `View` 가장자리의 계단 현상이 완화된 것을 볼 수 있다.
+
+AA 는 `borderRadius` 뿐 아니라 `opacity`, `shadow` 같은 속성으로도 활성화할 수 있다. 이 속성들이 AA 를 트리거하는 이유는 RN 이 내부적으로 iOS 네이티브 뷰를 사용하고, 네이티브 레벨에서 이런 속성이 있을 때만 AA 처리를 하기 때문이다. 그렇다면 왜 기본적으로 AA 를 활성화하지 않고, 특정 속성이 있을 때만 적용하도록 설계한 것일까?
+
+## TBDR 아키텍쳐
+
+모바일은 전력과 배터리가 제한되어 있다. 전력 소모와 발열의 주요 원인은 메모리 Read/Write 이므로, 모바일 GPU 는 메모리 대역폭을 크게 늘릴 수 없다.
+
+현대 모바일 GPU 의 TBDR 아키텍쳐가 이 제약 안에서 어떻게 동작하는지 살펴보자. TBDR 을 이해하려면 먼저 Render Pass 개념이 필요하다. Render Pass 는 GPU 가 화면을 한 번 그리기 위해 거치는 단계이며 아래와 같이 이루어진다.
+
+1. **frame buffer 생성** — 화면의 픽셀 정보를 저장하는 메모리. GPU 는 frame buffer 에 write 한다
+2. **draw** — geometry(primitive 꼭짓점 위치 계산) + fragment(픽셀 컬러 값 계산)
+3. **masking** — `borderRadius`, `opacity` 등의 후처리
+4. **composition**
+
+### IMR
+
+초기에는 IMR(Immediate Mode Rendering) 방식으로, draw 명령에 대해 오브젝트를 즉시 그렸다. primitive 가 어디에 있든 상관없이 즉시 그리기 때문에 전체 frame buffer 를 대상으로 접근하게 되고, cache hit 이 낮을 수밖에 없다. 모바일처럼 메모리 대역폭이 제한되고 별도의 VRAM 도 없는 환경에서는 비효율적인 구조다.
+
+### TBIMR
+
+이를 개선한 TBIMR(Tile-Based Immediate Mode Rendering) 이 등장했다. 이 방식은 프레임을 여러 개의 타일로 나눈 뒤, 각 타일마다 포함된 vertex 정보를 파악한다. 이때 primitive 는 여러 타일에 걸쳐 분리된다.
+
+<Image src="/images/posts/3dTransformAliasing/tile.gif" alt="tbimr" />
+
+중요한 점은 render pass 의 geometry 와 fragment 를 분리해서 처리한다는 것이다. 제한된 타일 영역에만 접근하므로 cache miss 가 대폭 줄어들고, frame buffer 메모리 영역이 타일 단위로 축소되어 온칩 메모리를 효율적으로 사용할 수 있으며 병렬 처리도 가능해진다.
+
+즉,
+
+- IMR: draw 명령마다 geometry → fragment → write
+- TBIMR: geometry 전부 완료 후 타일마다 fragment → 타일 단위로 write
+
+### TBDR
+
+마지막으로 TBDR(Tile-Based Deferred Rendering) 은 TBIMR 에 HSR(Hidden Surface Removal) 단계를 추가한 것이다. rasterize 후 fragment 전에 깊이 테스트를 수행하여, 가려진 픽셀의 fragment shading 자체를 생략한다. 이를 통해 불필요한 연산을 줄이고 전력 효율을 높인다.
+
+## Offscreen Rendering
+
+TBDR 아키텍쳐에서는 GPU 가 타일 기반으로 픽셀을 계산하여 frame buffer 에 store 하는 것이 일반적인 흐름이다.
+
+이때 `borderRadius` 나 `opacity` 같은 후처리가 필요한 속성이 등장하면 이야기가 달라진다. 이런 속성은 clip mask 로 픽셀을 깎아내는 과정이 필요하다. 그런데 fragment shading 은 각 픽셀을 독립적으로 처리하기 때문에, 자식 레이어들의 합성 결과를 한꺼번에 클리핑하는 mask 연산을 단일 패스로 수행할 수 없다.
+
+따라서 GPU 는 해당 속성이 포함된 경우 offscreen buffer 라는 추가 메모리 공간을 할당하고, 그 공간에서 masking 을 처리한다.
+
+이 과정은 메인 render pass 이전에 발생한다. 정리하면 다음과 같다.
+
+#### **OSR 이 없을 때**
+
+1. geometry
+2. HSR
+3. fragment & masking
+4. composition
+5. frame buffer 에 write
+
+#### **OSR 이 있을 때**
+
+**패스 1 — offscreen 패스**
+
+1. offscreen buffer 할당
+2. geometry & rasterize
+3. HSR — 보통 이 패스에는 뷰 하나만 있으므로 모든 픽셀이 통과
+4. fragment & masking
+5. offscreen buffer 에 write (store)
+
+**패스 2 — 메인 패스**
+
+1. geometry
+2. HSR
+3. offscreen 데이터 로드 — 추가 read 발생
+4. composition
+5. frame buffer 에 write
+
+OSR 이 있는 경우 offscreen buffer 를 위해 write, load 가 한 번씩 더 발생한다. 메모리 대역폭 사용량이 증가하기 때문에, 모바일에서는 이 성능 병목을 피하기 위해 AA 를 기본적으로 활성화하지 않는 것이다.
+
+## 사실 완벽한 AA 는 아니었다
+
+그런데 다시 보니 문제가 있었다. 바깥쪽 흰 테두리에는 AA 가 정상 적용됐지만, 내부 이미지 가장자리에는 미세한 계단 현상이 여전히 보였다.
+
+<Image
+  src="/images/posts/3dTransformAliasing/3.webp"
+  alt="3d transform aliasing"
+/>
+
+이는 기존 OSR 방식의 한계 때문이다. 기존 OSR 방식은 각 레이어를 분리하여 개별적으로 offscreen 에서 masking 한 뒤 마지막에 합성한다. 이때 레이어 간 경계는 별도로 interpolation 하지 않기 때문에 미세한 계단 현상이 남는 것이다.
+
+## shouldRasterizeIOS
+
+RN 의 `shouldRasterizeIOS` 속성을 추가하면 해결할 수 있다.
+
+<Image
+  src="/images/posts/3dTransformAliasing/4.webp"
+  alt="3d transform aliasing"
+/>
+
+`shouldRasterizeIOS` 는 기존처럼 레이어를 분리하여 OSR 하는 대신, 해당 뷰 계층의 레이어들을 하나의 비트맵으로 합성한다. 그리고 그 결과를 offscreen buffer 에 캐싱한다. 이후 해당 비트맵을 렌더링할 때는 offscreen buffer 에서 로드하고, 메인 render pass 에서 rotate 및 AA(bilinear filtering) 를 적용한 뒤 frame buffer 로 store 한다.
+
+따라서 기존 OSR 과 두 가지 차이가 생긴다.
+
+1. 매번 OSR 과정을 거치지 않고 캐싱된 비트맵을 재사용
+2. 각 레이어를 분리해서 합성하지 않고 처음부터 합성된 비트맵을 사용
+
+이렇게 하면 미세한 계단 현상이 해결된다. `borderRadius` 는 각 레이어를 개별적으로 AA 하지만, `shouldRasterizeIOS` 는 하나로 합친 비트맵 자체에 AA 를 적용하기 때문에 레이어 간 interpolation 이 적용되어 훨씬 부드럽다.
+
+물론 `shouldRasterizeIOS` 는 비트맵 캐싱을 위해 메모리를 더 사용할 수 있다. 따라서 자주 바뀌지 않는 요소에 사용하는 것이 좋다.
+
+나의 경우 `FlatList` 의 요소들에 적용했다. `FlatList` 는 자체적으로 virtualization 하기 때문에 화면 밖 요소가 unmount 되면 캐시도 해제되고, 요소 자체도 거의 변경되지 않아 shouldRasterizeIOS 를 사용하기에 적합하다고 판단했다.
+
+### References
+
+- [게임 그래픽 설정시 최대 난관인거 (안티앨리어싱)](https://youtu.be/_c_ffkt9Lio)
+- [GPU Framebuffer - Samsung](https://developer.samsung.com/galaxy-gamedev/resources/articles/gpu-framebuffer.html)
+- [Tile-based GPUs - Arm](https://developer.arm.com/documentation/102662/0100/Tile-based-GPUs)
+- [PowerVR Tile-Based Rendering - Imagination](https://blog.imaginationtech.com/a-look-at-the-powervr-graphics-architecture-tile-based-rendering/)
