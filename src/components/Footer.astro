@@ -6,9 +6,15 @@
   <span class="font-medium">© tw.heo</span>
   <span class="mx-2 text-gray-500">·</span>
   <a
-    href="mailto:tw.heo24@gmail.com"
+    id="email-link"
     class="underline hover:text-gray-800 transition-colors duration-300"
-  >
-    tw.heo24@gmail.com
-  </a>
+  ></a>
+  <script>
+    const a = document.getElementById("email-link");
+    if (a) {
+      const e = ["tw.heo24", "gmail.com"].join("@");
+      a.href = "mailto:" + e;
+      a.textContent = e;
+    }
+  </script>
 </footer>
