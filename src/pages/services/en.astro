@@ -1,0 +1,786 @@
+---
+import "@/styles/global.css";
+import * as Constants from "@/lib/consts";
+
+const title = "TAEWOONG HEO — Services";
+const description =
+  "App Development & Technical Consulting by TAEWOONG HEO";
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="generator" content={Astro.generator} />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&family=Work+Sans:wght@300;400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+
+    <title>{title}</title>
+    <meta name="title" content={title} />
+    <meta name="description" content={description} />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:title" content={title} />
+    <meta property="twitter:description" content={description} />
+  </head>
+
+  <body>
+    <!-- Navigation -->
+    <nav class="nav">
+      <a href="/" class="nav-logo">tw.heo</a>
+      <div class="nav-links">
+        <a href="#services">Services</a>
+        <a href="#works">Works</a>
+        <a href="#contact">Contact</a>
+      </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="hero">
+      <div class="hero-inner">
+        <p class="hero-label">TAEWOONG HEO — App Development & Consulting</p>
+        <h1 class="hero-title">
+          Development that<br />elevates app quality
+        </h1>
+        <p class="hero-sub">
+          Same features, same timeline, same price.<br />
+          The difference is in the quality of the result.
+        </p>
+        <a href="#contact" class="hero-cta">Get in touch ↓</a>
+      </div>
+    </section>
+
+    <!-- Services -->
+    <section id="services" class="section">
+      <div class="container">
+        <h2 class="section-label">Services</h2>
+        <div class="services-grid">
+          <div class="service-card">
+            <span class="service-num">01</span>
+            <h3 class="service-title">Mobile App</h3>
+            <p class="service-desc">
+              Cross-platform iOS & Android app development with React Native.
+              Every project ships with polished interactions — bottom sheets, screen transitions, and button feedback.
+            </p>
+          </div>
+          <div class="service-card">
+            <span class="service-num">02</span>
+            <h3 class="service-title">Web App</h3>
+            <p class="service-desc">
+              Responsive web application development with Next.js.
+              Fast loading, accessibility, and thoughtful interactions come standard.
+            </p>
+          </div>
+          <div class="service-card">
+            <span class="service-num">03</span>
+            <h3 class="service-title">Consulting</h3>
+            <p class="service-desc">
+              Architecture design, performance optimization, and code review.
+              Advice on the technical decisions that matter.
+            </p>
+          </div>
+        </div>
+        <p class="services-note">
+          * For smaller projects without design mockups, UI/UX design can be included as part of the engagement.
+        </p>
+      </div>
+    </section>
+
+    <!-- Process -->
+    <section id="process" class="section">
+      <div class="container">
+        <h2 class="section-label">Process</h2>
+        <div class="process-grid">
+          <div class="process-step">
+            <span class="process-num">01</span>
+            <h3 class="process-title">Consultation</h3>
+            <p class="process-desc">
+              Understanding the project's goals, scope, and timeline.
+              Share your design mockups if available.
+            </p>
+          </div>
+          <div class="process-step">
+            <span class="process-num">02</span>
+            <h3 class="process-title">Estimate & Schedule</h3>
+            <p class="process-desc">
+              Estimates and timelines are based on the feature spec.
+              We move forward once both sides agree.
+            </p>
+          </div>
+          <div class="process-step">
+            <span class="process-num">03</span>
+            <h3 class="process-title">Development</h3>
+            <p class="process-desc">
+              You'll get weekly progress updates.
+              Mid-project check-ins keep us aligned on direction.
+            </p>
+          </div>
+          <div class="process-step">
+            <span class="process-num">04</span>
+            <h3 class="process-title">Delivery & Launch</h3>
+            <p class="process-desc">
+              App Store deployment or source code handoff after final review.
+              Maintenance support is included for a set period after launch.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Works / Portfolio -->
+    <section id="works" class="section">
+      <div class="container">
+        <h2 class="section-label">Selected Works</h2>
+        <div class="works-grid">
+          <a class="work-item" href="https://apps.apple.com/app/enflo-visual-flow-timer/id6753640753" target="_blank" rel="noopener">
+            <div class="work-thumb">
+              <img src="/images/projects/enflo-site.png" alt="enflo — focus measurement app" />
+            </div>
+            <div class="work-info">
+              <h3 class="work-title">enflo</h3>
+              <p class="work-tag">Mobile App — 2025</p>
+            </div>
+          </a>
+          <a class="work-item" href="https://apps.apple.com/ie/app/pado-anxiety-relief-act/id6758645161" target="_blank" rel="noopener">
+            <div class="work-thumb">
+              <img src="/images/projects/pado-site.png" alt="Pado — emotion journaling app" />
+            </div>
+            <div class="work-info">
+              <h3 class="work-title">Pado</h3>
+              <p class="work-tag">Mobile App — 2025</p>
+            </div>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- About / Legal Entity -->
+    <section id="about" class="section">
+      <div class="container">
+        <h2 class="section-label">About</h2>
+        <div class="about-grid">
+          <div class="about-text">
+            <p>
+              Software engineer specializing in React Native and Next.js.
+              I don't stop at making things work — I build products
+              with polished interactions and attention to detail.
+            </p>
+            <div class="about-stack">
+              <span class="stack-label">Tech Stack</span>
+              <div class="stack-list">
+                <span>React</span>
+                <span>Next.js</span>
+                <span>React Native</span>
+                <span>AWS</span>
+                <span>Supabase</span>
+              </div>
+            </div>
+            <div class="about-links">
+              <a href="https://twheo.dev/blog" class="about-link">
+                Blog — Technical Deep Dives ↗
+              </a>
+              <a href="https://github.com/taewoongheo" class="about-link">
+                GitHub ↗
+              </a>
+            </div>
+          </div>
+          <div class="about-info">
+            <dl class="info-list">
+              <div class="info-row">
+                <dt>Legal Entity</dt>
+                <dd>TAEWOONG HEO</dd>
+              </div>
+              <div class="info-row">
+                <dt>Business</dt>
+                <dd>Application Software Development & Supply</dd>
+              </div>
+              <div class="info-row">
+                <dt>Website</dt>
+                <dd><a href="https://twheo.dev">twheo.dev</a></dd>
+              </div>
+            </dl>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Contact -->
+    <section id="contact" class="section section-contact">
+      <div class="container contact-container">
+        <h2 class="contact-heading">Let's Work<br />Together</h2>
+        <p class="contact-desc">
+          Let's talk about your project.
+        </p>
+        <a id="contact-email" class="contact-email"></a>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <div class="footer-business">
+          <span>TAEWOONG HEO</span>
+          <span class="footer-sep">·</span>
+          <span>Application Software Development & Supply</span>
+          <span class="footer-sep">·</span>
+          <a href="https://twheo.dev">twheo.dev</a>
+        </div>
+        <span class="footer-copy">© 2026 TAEWOONG HEO</span>
+      </div>
+    </footer>
+
+    <script>
+      const a = document.getElementById("contact-email");
+      if (a) {
+        const e = ["tw.heo24", "gmail.com"].join("@");
+        (a as HTMLAnchorElement).href = "mailto:" + e;
+        a.textContent = e;
+      }
+    </script>
+
+    <style>
+      /* ===== Reset & Base ===== */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Work Sans", sans-serif;
+        background: #fafaf9;
+        color: #1c1917;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+
+      @media (min-width: 768px) {
+        .container {
+          padding: 0 48px;
+        }
+      }
+
+      /* ===== Navigation ===== */
+      .nav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 100;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 24px 32px;
+        background: rgba(250, 250, 249, 0.85);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-bottom: 1px solid #e7e5e4;
+      }
+
+      .nav-logo {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 14px;
+        font-weight: 500;
+        letter-spacing: 0.05em;
+        color: #1c1917;
+      }
+
+      .nav-links {
+        display: flex;
+        gap: 28px;
+      }
+
+      .nav-links a {
+        font-size: 13px;
+        font-weight: 400;
+        color: #78716c;
+        letter-spacing: 0.02em;
+        transition: color 0.2s;
+        padding: 4px 0;
+      }
+
+      .nav-links a:hover {
+        color: #1c1917;
+      }
+
+      /* ===== Hero ===== */
+      .hero {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        padding: 120px 48px 80px;
+      }
+
+      .hero-inner {
+        max-width: 1200px;
+        margin: 0 auto;
+        width: 100%;
+      }
+
+      .hero-label {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 13px;
+        font-weight: 400;
+        color: #78716c;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin-bottom: 32px;
+      }
+
+      .hero-title {
+        font-size: clamp(36px, 8vw, 80px);
+        font-weight: 800;
+        line-height: 1.15;
+        letter-spacing: -0.03em;
+        color: #1c1917;
+        margin-bottom: 32px;
+      }
+
+      .hero-sub {
+        font-size: 16px;
+        line-height: 1.7;
+        color: #57534e;
+        max-width: 400px;
+        margin-bottom: 48px;
+      }
+
+      .hero-cta {
+        display: inline-block;
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 13px;
+        font-weight: 500;
+        color: #1c1917;
+        padding: 14px 28px;
+        border: 1px solid #a8a29e;
+        border-radius: 0;
+        letter-spacing: 0.04em;
+        transition: background 0.2s, border-color 0.2s;
+      }
+
+      .hero-cta:hover {
+        background: #1c1917;
+        color: #fafaf9;
+        border-color: #1c1917;
+      }
+
+      /* ===== Sections ===== */
+      .section {
+        padding: 100px 0;
+        border-top: 1px solid #e7e5e4;
+      }
+
+      .section:nth-child(even) {
+        padding: 120px 0;
+      }
+
+      .section-label {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 12px;
+        font-weight: 500;
+        color: #78716c;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        margin-bottom: 56px;
+      }
+
+      /* ===== Services ===== */
+      .services-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 1px;
+        background: #e7e5e4;
+      }
+
+      @media (min-width: 768px) {
+        .services-grid {
+          grid-template-columns: repeat(3, 1fr);
+        }
+      }
+
+      .service-card {
+        background: #fafaf9;
+        padding: 40px 32px;
+        transition: background 0.3s;
+      }
+
+      .service-card:hover {
+        background: #f5f5f4;
+      }
+
+      .service-num {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 12px;
+        color: #a8a29e;
+        display: block;
+        margin-bottom: 24px;
+      }
+
+      .service-title {
+        font-size: 20px;
+        font-weight: 600;
+        color: #1c1917;
+        margin-bottom: 16px;
+        line-height: 1.3;
+      }
+
+      .service-desc {
+        font-size: 14px;
+        line-height: 1.7;
+        color: #57534e;
+      }
+
+      .services-note {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 12px;
+        color: #78716c;
+        margin-top: 24px;
+      }
+
+      /* ===== Process ===== */
+      .process-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 1px;
+        background: #e7e5e4;
+      }
+
+      @media (min-width: 768px) {
+        .process-grid {
+          grid-template-columns: repeat(4, 1fr);
+        }
+      }
+
+      .process-step {
+        background: #fafaf9;
+        padding: 40px 32px;
+      }
+
+      .process-num {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 12px;
+        color: #a8a29e;
+        display: block;
+        margin-bottom: 20px;
+      }
+
+      .process-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: #1c1917;
+        margin-bottom: 12px;
+      }
+
+      .process-desc {
+        font-size: 14px;
+        line-height: 1.7;
+        color: #57534e;
+      }
+
+      /* ===== Works ===== */
+      .works-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 24px;
+      }
+
+      @media (min-width: 768px) {
+        .works-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+
+      .work-item {
+        display: block;
+        text-decoration: none;
+        transition: opacity 0.3s;
+      }
+
+      .work-item:hover {
+        opacity: 0.8;
+      }
+
+      .work-thumb {
+        aspect-ratio: 3 / 4;
+        max-height: 420px;
+        background: #ffffff;
+        border: 1px solid #e7e5e4;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        margin-bottom: 16px;
+      }
+
+      .work-thumb img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+      }
+
+      .work-info {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .work-title {
+        font-size: 16px;
+        font-weight: 500;
+        color: #1c1917;
+      }
+
+      .work-tag {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 12px;
+        color: #78716c;
+        white-space: nowrap;
+      }
+
+      /* ===== About ===== */
+      .about-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 64px;
+      }
+
+      @media (min-width: 768px) {
+        .about-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+
+      .about-text p {
+        font-size: 18px;
+        line-height: 1.8;
+        color: #44403c;
+      }
+
+      .about-stack {
+        margin-top: 32px;
+      }
+
+      .stack-label {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 11px;
+        font-weight: 500;
+        color: #78716c;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        display: block;
+        margin-bottom: 12px;
+      }
+
+      .stack-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .stack-list span {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 12px;
+        color: #44403c;
+        padding: 5px 12px;
+        border: 1px solid #d6d3d1;
+      }
+
+      .about-links {
+        margin-top: 28px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .about-link {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 13px;
+        color: #44403c;
+        text-decoration: underline;
+        text-underline-offset: 3px;
+        transition: color 0.2s;
+      }
+
+      .about-link:hover {
+        color: #1c1917;
+      }
+
+      .info-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+      }
+
+      .info-row {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding: 20px 0;
+        border-bottom: 1px solid #e7e5e4;
+      }
+
+      .info-row:first-child {
+        padding-top: 0;
+      }
+
+      .info-row dt {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 11px;
+        font-weight: 500;
+        color: #78716c;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .info-row dd {
+        font-size: 15px;
+        color: #292524;
+      }
+
+      .info-row dd a {
+        text-decoration: underline;
+        text-underline-offset: 3px;
+        transition: color 0.2s;
+      }
+
+      .info-row dd a:hover {
+        color: #1c1917;
+      }
+
+      /* ===== Contact ===== */
+      .section-contact {
+        padding: 160px 0;
+        text-align: center;
+      }
+
+      .contact-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .contact-heading {
+        font-size: clamp(36px, 8vw, 80px);
+        font-weight: 800;
+        line-height: 1.05;
+        letter-spacing: -0.02em;
+        color: #1c1917;
+        margin-bottom: 24px;
+      }
+
+      .contact-desc {
+        font-size: 16px;
+        color: #57534e;
+        margin-bottom: 40px;
+      }
+
+      .contact-email {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 15px;
+        color: #1c1917;
+        padding: 14px 32px;
+        border: 1px solid #a8a29e;
+        transition: background 0.2s, border-color 0.2s;
+      }
+
+      .contact-email:hover {
+        background: #1c1917;
+        color: #fafaf9;
+        border-color: #1c1917;
+      }
+
+      /* ===== Footer ===== */
+      .site-footer {
+        padding: 32px 0;
+        border-top: 1px solid #e7e5e4;
+      }
+
+      .footer-inner {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        align-items: center;
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 11px;
+        color: #78716c;
+      }
+
+      .footer-business {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0;
+        align-items: center;
+      }
+
+      .footer-sep {
+        margin: 0 8px;
+        color: #a8a29e;
+      }
+
+      .footer-inner a {
+        text-decoration: underline;
+        text-underline-offset: 3px;
+        transition: color 0.2s;
+      }
+
+      .footer-inner a:hover {
+        color: #292524;
+      }
+
+      .footer-copy {
+        color: #a8a29e;
+      }
+
+      /* ===== Mobile adjustments ===== */
+      @media (max-width: 767px) {
+        .hero {
+          padding: 100px 24px 60px;
+        }
+
+        .nav {
+          padding: 18px 20px;
+        }
+
+        .nav-links {
+          gap: 20px;
+        }
+
+        .nav-links a {
+          font-size: 12px;
+        }
+
+        .service-card {
+          padding: 32px 24px;
+        }
+      }
+    </style>
+  </body>
+</html>

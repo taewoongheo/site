@@ -8,7 +8,7 @@ const description =
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang="ko">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -42,7 +42,6 @@ const description =
       <a href="/" class="nav-logo">tw.heo</a>
       <div class="nav-links">
         <a href="#services">Services</a>
-        <a href="#difference">Difference</a>
         <a href="#works">Works</a>
         <a href="#contact">Contact</a>
       </div>
@@ -99,7 +98,8 @@ const description =
       </div>
     </section>
 
-    <!-- Difference -->
+    <!-- Difference (준비 중 — GIF 자료 확보 후 활성화) -->
+    <!--
     <section id="difference" class="section">
       <div class="container">
         <h2 class="section-label">The Difference</h2>
@@ -111,8 +111,6 @@ const description =
           추가 비용 없이, 기본에 포함된 디테일입니다.
         </p>
         <div class="comparison-grid">
-          <!-- Before/After 비교: GIF를 직접 넣어주세요 -->
-          <!-- src/assets/images/comparison/ 에 GIF 추가 후 <img> 로 교체 -->
           <div class="comparison-item">
             <div class="comparison-pair">
               <div class="comparison-cell">
@@ -150,6 +148,7 @@ const description =
         </div>
       </div>
     </section>
+    -->
 
     <!-- Process -->
     <section id="process" class="section">
@@ -197,42 +196,22 @@ const description =
       <div class="container">
         <h2 class="section-label">Selected Works</h2>
         <div class="works-grid">
-          <!-- 포트폴리오 아이템: 이미지 + 제목 + 설명 구조 -->
-          <!-- 이미지는 16:9 비율, src/assets/images/works/ 에 추가 -->
-          <a class="work-item" href="#">
+          <a class="work-item" href="https://apps.apple.com/app/enflo-visual-flow-timer/id6753640753" target="_blank" rel="noopener">
             <div class="work-thumb">
-              <span class="work-placeholder">Image</span>
+              <img src="/images/projects/enflo-site.png" alt="enflo — 집중력 측정 앱" />
             </div>
             <div class="work-info">
-              <h3 class="work-title">Project Title</h3>
+              <h3 class="work-title">enflo</h3>
               <p class="work-tag">Mobile App — 2025</p>
             </div>
           </a>
-          <a class="work-item" href="#">
+          <a class="work-item" href="https://apps.apple.com/ie/app/pado-anxiety-relief-act/id6758645161" target="_blank" rel="noopener">
             <div class="work-thumb">
-              <span class="work-placeholder">Image</span>
+              <img src="/images/projects/pado-site.png" alt="파도 — 감정 기록 앱" />
             </div>
             <div class="work-info">
-              <h3 class="work-title">Project Title</h3>
-              <p class="work-tag">Web App — 2025</p>
-            </div>
-          </a>
-          <a class="work-item" href="#">
-            <div class="work-thumb">
-              <span class="work-placeholder">Image</span>
-            </div>
-            <div class="work-info">
-              <h3 class="work-title">Project Title</h3>
-              <p class="work-tag">Consulting — 2025</p>
-            </div>
-          </a>
-          <a class="work-item" href="#">
-            <div class="work-thumb">
-              <span class="work-placeholder">Image</span>
-            </div>
-            <div class="work-info">
-              <h3 class="work-title">Project Title</h3>
-              <p class="work-tag">Mobile App — 2024</p>
+              <h3 class="work-title">파도</h3>
+              <p class="work-tag">Mobile App — 2025</p>
             </div>
           </a>
         </div>
@@ -675,9 +654,11 @@ const description =
       }
 
       .work-thumb {
-        aspect-ratio: 16 / 9;
-        background: #f5f5f4;
+        aspect-ratio: 3 / 4;
+        max-height: 420px;
+        background: #ffffff;
         border: 1px solid #e7e5e4;
+        border-radius: 16px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -688,7 +669,7 @@ const description =
       .work-thumb img {
         width: 100%;
         height: 100%;
-        object-fit: cover;
+        object-fit: contain;
       }
 
       .work-placeholder {
@@ -699,9 +680,8 @@ const description =
 
       .work-info {
         display: flex;
-        justify-content: space-between;
-        align-items: baseline;
-        gap: 16px;
+        flex-direction: column;
+        gap: 4px;
       }
 
       .work-title {
